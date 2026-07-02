@@ -1,0 +1,10 @@
+{
+  "name": "bioxa-veille",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Veille communication Bioxa — cron hebdomadaire Claude + web search → Notion",
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  }
+}
