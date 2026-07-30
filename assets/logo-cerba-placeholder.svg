@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="64" viewBox="0 0 220 64"
+     role="img" aria-label="Emplacement réservé : logo Cerba"
+     data-cerba-placeholder="logo">
+  <title>Emplacement réservé — logo Cerba</title>
+  <desc>Le logo officiel n'a pas pu être téléchargé. Ne pas redessiner : remplacer ce fichier par le SVG officiel.</desc>
+  <rect x="1" y="1" width="218" height="62" rx="4"
+        fill="none" stroke="#5A6B7A" stroke-width="1" stroke-dasharray="6 4"/>
+  <text x="110" y="37" text-anchor="middle"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="16" fill="#5A6B7A">logo Cerba</text>
+</svg>
