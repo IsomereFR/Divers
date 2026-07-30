@@ -1,52 +1,63 @@
 # Design tokens — Cerba
 
-> **⛔ AVERTISSEMENT — AUCUNE VALEUR DE CE FICHIER N'A ÉTÉ EXTRAITE DE LA SOURCE CERBA.**
-> L'accès réseau sortant est bloqué dans cet environnement (détail §2). Toutes les valeurs
-> ci-dessous proviennent soit du **repli fourni dans le brief**, soit de **valeurs neutres
-> génériques** que j'ai choisies faute de source. Elles sont à remplacer par extraction réelle
-> dès qu'un accès à `www.lab-cerba.com` est disponible. Aucune valeur n'a été devinée « à la
-> manière de » Cerba : ce qui n'a pas pu être extrait est marqué manquant, pas comblé.
+> **Niveau de fiabilité de ce fichier : mixte.** Le CSS du thème Drupal n'a **jamais pu être
+> lu** (réseau bloqué, §2). Une partie des tokens est désormais **observée sur des captures
+> d'écran fournies par l'utilisateur** — c'est une source réelle, mais imprécise : les hexa
+> sont des **estimations visuelles**, pas des valeurs échantillonnées dans le code.
+> Chaque ligne porte son niveau. Rien n'a été deviné « à la manière de » Cerba.
 
-Date de rédaction : 2026-07-30
+Date : 2026-07-30 · Mise à jour : ajout des observations sur captures d'écran
+
+---
+
+## 0. Les trois niveaux de source
+
+| Niveau | Signification | Utilisable ? |
+|---|---|---|
+| 🟢 **A — Observé** | Structure lisible avec certitude sur les captures (motifs, comportements, usages) | Oui |
+| 🟡 **B — Estimé** | Valeur lue à l'œil sur une capture rendue. Ordre de grandeur juste, hexa approximatif | Oui, à titre provisoire |
+| ⛔ **C — Inconnu** | Ni extrait, ni observable. Aucune valeur inventée | Non |
+
+Le repli du brief est rétrogradé : là où la capture le contredit, **c'est la capture qui gagne**
+(voir §3.1, deux valeurs de repli sont fausses).
 
 ---
 
 ## 1. Statut d'extraction
 
-| Élément demandé | Statut | Source réelle utilisée |
+| Élément | Niveau | Détail |
 |---|---|---|
-| Feuille de style du thème Drupal `/sites/default/themes/custom/lab/` | ❌ **NON EXTRAITE** | — (réseau bloqué) |
-| Bleu primaire | ⚠️ Repli | Brief utilisateur, §REPLI |
-| Couleur(s) secondaire(s) | ❌ **NON EXTRAITE** | — aucune valeur, aucun repli fourni |
-| Couleurs de fond | ⚠️ Repli | Brief utilisateur, §REPLI |
-| Couleur de texte (encre) | ⚠️ Repli | Brief utilisateur, §REPLI |
-| Familles de police réelles | ❌ **NON EXTRAITES** | `system-ui` d'attente (brief, §REPLI) |
-| Poids de police réels | ❌ **NON EXTRAITS** | — |
-| Rayons de bordure | ❌ **NON EXTRAITS** | valeurs neutres génériques (§6) |
-| Échelle typographique | ❌ **NON EXTRAITE** | valeurs neutres génériques (§6) |
-| Densité d'espacement | ❌ **NON EXTRAITE** | valeurs neutres génériques (§6) |
-| Logo SVG officiel | ❌ **NON TÉLÉCHARGÉ** | emplacement neutre, §8 |
-| Motif « coup de pinceau » (SVG) | ❌ **NON RÉCUPÉRÉ** | emplacement vide, §9 — **non redessiné** |
-| Code identitaire des titres (gras partiel) | ✅ **SOURCÉ** | Brief utilisateur, 3 titres relevés — §10 |
-
-Un seul point de la mission repose sur une source réelle : le motif de mise en gras des
-titres (§10), fourni directement dans le brief avec trois exemples relevés sur le site.
+| Feuille de style `/sites/default/themes/custom/lab/` | ⛔ C | Jamais lue — réseau bloqué |
+| Bleu foncé (encre / titres accentués) | 🟡 B | Estimé §3 — **le repli `#1B2B3A` est faux** |
+| Bleu intermédiaire (titres non accentués) | 🟡 B | Estimé §3 — non prévu par le repli |
+| Bleu « brush » (couleur secondaire) | 🟡 B | Estimé §3 — **identifié, il n'était pas dans le repli** |
+| Bleu CTA | 🟡 B | Estimé §3 |
+| Fond principal | 🟢 A | Blanc — confirmé |
+| Fond alterné | 🟡 B | Estimé §3 — **le repli `#F4F8FB` est faux** (lavande, pas cyan) |
+| Familles de police | ⛔ C | Non identifiées — caractéristiques relevées §4 |
+| Poids de police | 🟡 B | Trois graisses distinctes observées §5 |
+| Rayons de bordure | 🟡 B | Ordre de grandeur observé §6 |
+| Échelle typographique | ⛔ C | Rapports observés, valeurs absolues inconnues §6 |
+| Densité d'espacement | ⛔ C | Non mesurable sur capture |
+| Fichier SVG du logo | ⛔ C | Non téléchargé — **non redessiné** §8 |
+| Fichiers SVG « brush » | ⛔ C | Non téléchargés — **non redessinés** §9 |
+| Motif de gras partiel des titres | 🟢 A | **Confirmé et enrichi** §10 |
+| Usages du motif brush | 🟢 A | Trois usages distincts identifiés §9 |
 
 ---
 
-## 2. Preuve du blocage (pourquoi l'extraction a échoué)
+## 2. Pourquoi le CSS n'a pas pu être lu
 
-Toutes les requêtes HTTPS sortantes de cette session sont refusées par la passerelle
-d'egress, **quel que soit l'hôte** — ce n'est pas une protection anti-bot côté Cerba :
+Toutes les requêtes HTTPS sortantes de la session sont refusées par la passerelle d'egress,
+**quel que soit l'hôte** — ce n'est pas une protection anti-bot côté Cerba :
 
 ```
 https://example.com          -> CONNECT tunnel failed, response 403
 https://www.lab-cerba.com/fr -> CONNECT tunnel failed, response 403
-https://lab-cerba.com/fr     -> CONNECT tunnel failed, response 403
 https://web.archive.org/     -> CONNECT tunnel failed, response 403
 ```
 
-Journal du proxy (`/__agentproxy/status`, champ `recentRelayFailures`) :
+Journal du proxy (`/__agentproxy/status`) :
 
 ```json
 { "kind": "connect_rejected",
@@ -54,279 +65,305 @@ Journal du proxy (`/__agentproxy/status`, champ `recentRelayFailures`) :
   "host": "www.lab-cerba.com:443" }
 ```
 
-L'outil `WebFetch` renvoie également `403 Forbidden` sur `example.com` comme sur
-`lab-cerba.com` : même chemin d'egress. La recherche web fonctionne (elle passe par
-l'infrastructure Anthropic) mais ne restitue que du texte éditorial — **jamais de règles CSS,
-de valeurs hexadécimales ni de code SVG**. Elle n'a donc servi à extraire aucun token.
-
-**Ce qu'il faut débloquer :** autoriser `www.lab-cerba.com` dans la politique réseau de
-l'environnement, ou me fournir les fichiers directement (voir §11).
+`WebFetch` emprunte le même chemin et renvoie le même `403`. Conséquence directe : **aucune
+valeur hexadécimale exacte, aucun `font-family`, aucun fichier SVG** n'est accessible. Les
+captures compensent partiellement — elles ne remplacent pas le CSS.
 
 ---
 
-## 3. Couleurs — repli du brief
+## 3. Couleurs
 
-| Token | Valeur | Rôle | Source |
+### 3.1 Deux valeurs du repli sont contredites par les captures
+
+| Token | Repli du brief | Observation capture | Verdict |
 |---|---|---|---|
-| `--cerba-blue-primary` | `#005CA9` | Bleu primaire | ⚠️ **Repli du brief — NON EXTRAIT du CSS Cerba** |
-| `--cerba-ink` | `#1B2B3A` | Texte principal | ⚠️ **Repli du brief — NON EXTRAIT** |
-| `--cerba-surface` | `#FFFFFF` | Fond principal | ⚠️ **Repli du brief — NON EXTRAIT** |
-| `--cerba-surface-alt` | `#F4F8FB` | Fond alterné (sections) | ⚠️ **Repli du brief — NON EXTRAIT** |
-| `--cerba-secondary` | ❌ **ABSENT** | Couleur secondaire | Aucune valeur — ni extraite, ni fournie en repli. **Ne pas inventer.** |
+| Fond alterné | `#F4F8FB` (blanc cyanisé) | Bande nettement **lavande / périwinkle**, saturation visible | ❌ **Repli faux** |
+| Encre | `#1B2B3A` (gris-bleu neutre) | **Bleu marine franc**, pas un gris | ❌ **Repli faux** |
+| Bleu primaire | `#005CA9` (bleu cyan vif) | Aucun aplat de cette teinte visible ; le marine est plus sombre, le CTA plus violacé | ⚠️ Douteux |
 
-### Valeurs dérivées
+Ne pas repartir du repli pour ces trois-là.
 
-Ces valeurs sont calculées **mécaniquement** à partir du repli (pas relevées sur le site).
-Elles disparaîtront ou changeront lors de l'extraction réelle.
+### 3.2 Palette estimée (🟡 niveau B — hexa approximatifs)
 
-| Token | Valeur | Dérivation |
-|---|---|---|
-| `--cerba-blue-hover` | `#004A87` | `--cerba-blue-primary` assombri (~15 %) — calcul, non sourcé |
-| `--cerba-border` | `#D9E4EE` | Bordure neutre accordée au fond alterné — choix neutre, non sourcé |
-| `--cerba-muted` | `#5A6B7A` | Texte secondaire, éclairci depuis `--cerba-ink` — calcul, non sourcé |
+| Token | Estimation | Rôle observé | Source |
+|---|---|---|---|
+| `--cerba-navy` | `≈ #1B3A6B` | Fragment accentué des titres, chiffres-clés, navigation | 🟡 Capture 1 (« Over 650 »), capture 2 (« Tailored and accessible ») |
+| `--cerba-slate` | `≈ #5079A8` | Fragment **non** accentué des titres | 🟡 Capture 1 (« The largest European laboratory ») |
+| `--cerba-brush` | `≈ #82ACD8` | **Couleur secondaire** — motif pinceau | 🟡 Capture 1 et 2 (aplats du pinceau) |
+| `--cerba-cta` | `≈ #1E3F94` | Fond de bouton primaire | 🟡 Capture 2 (« Discover the Group ») |
+| `--cerba-card-overlay` | `≈ #2F80C4` | Voile bleu sur vignettes de spécialité | 🟡 Capture 3 |
+| `--cerba-surface` | `#FFFFFF` | Fond principal | 🟢 A |
+| `--cerba-surface-alt` | `≈ #DBE1EF` | Bandes de section alternées | 🟡 Capture 1 et 2 (bandes pleine largeur) |
+| `--cerba-text-body` | `≈ #5C5C5C` | Corps de texte — **gris, pas bleu** | 🟡 Capture 1 et 2 |
 
-> ⚠️ Aucune couleur d'état (succès / alerte / erreur) n'est définie : elles n'ont pas pu être
-> extraites et le brief n'en fournit pas. Ne pas en improviser.
+> ⚠️ Les hexa ci-dessus sont lus à l'œil sur des captures compressées. Ils donnent la **teinte
+> et la valeur justes à quelques unités près**, pas la valeur de marque. À remplacer par
+> échantillonnage du CSS.
+
+### 3.3 Ce qui reste inconnu
+
+- Couleurs d'état (succès / alerte / erreur) — ⛔ aucune trace sur les captures.
+- Les quatre teintes du logo (dégradé cyan → marine sur les pastilles) — ⛔ non échantillonnables
+  de façon fiable, le logo est trop petit sur la capture.
+- Le dégradé bleu du bandeau de vignettes (capture 3) semble varier d'une carte à l'autre — ⛔
+  comportement non déterminé.
 
 ---
 
-## 4. Typographie — familles
+## 4. Typographie — familles ⛔ NON IDENTIFIÉES
 
-| Token | Valeur | Source |
+La famille réelle n'a pas pu être extraite. Caractéristiques relevées sur les captures, à
+titre d'indice pour l'identification future — **ce ne sont pas des tokens** :
+
+- Sans-serif humaniste / grotesque, hauteur d'x élevée
+- `a` à double étage, terminaisons horizontales, `o` très circulaire
+- Chiffres tabulaires larges et ouverts (« 5 000 », « Over 1 300 »)
+- Rendu très proche d'une grotesque néo-classique de type Roboto — **ressemblance ≠
+  identification, ne pas figer cette hypothèse dans le code**
+
+| Token | Valeur provisoire | Niveau |
 |---|---|---|
-| `--cerba-font-sans` | `system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif` | ⚠️ **Repli du brief, « en attendant identification »** |
-| Famille réelle des titres | ❌ **INCONNUE** | Non extraite |
-| Famille réelle du corps de texte | ❌ **INCONNUE** | Non extraite |
-| Fonte(s) auto-hébergée(s) `@font-face` | ❌ **INCONNUES** | Non extraites — le thème Drupal n'a pas pu être lu |
+| `--cerba-font-sans` | `system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif` | ⛔ Repli du brief |
+
+---
 
 ## 5. Typographie — poids
 
-Le code identitaire de Cerba (§10) repose sur **un contraste de graisse à l'intérieur d'un
-même titre**. Les deux graisses réelles sont donc structurantes — et elles sont inconnues.
+**Trois graisses distinctes** sont visibles, pas deux — c'est plus riche que ce que supposait
+le brief :
 
-| Token | Valeur provisoire | Source |
-|---|---|---|
-| `--cerba-weight-regular` | `400` | ⚠️ Valeur neutre par défaut — **poids réel non extrait** |
-| `--cerba-weight-bold` | `700` | ⚠️ Valeur neutre par défaut — **poids réel non extrait** |
+| Token | Estimation | Usage observé | Niveau |
+|---|---|---|---|
+| `--cerba-weight-light` | `≈ 300` | Titres de page (« About us »), chiffres-clés (« Over 650 ») | 🟡 B |
+| `--cerba-weight-regular` | `≈ 400` | Corps de texte, fragment non accentué des titres | 🟡 B |
+| `--cerba-weight-bold` | `≈ 700` | Fragment accentué des titres, emphases dans le corps | 🟡 B |
 
-> Le couple réel est peut-être 300/600, 400/600 ou 350/700 : l'écart de graisse détermine
-> l'intensité du motif identitaire. **À vérifier en priorité lors de l'extraction.**
-
----
-
-## 6. Rayons, échelle typographique, espacement — valeurs neutres génériques
-
-> ⛔ **Rien dans cette section ne vient de Cerba.** Aucune de ces valeurs n'a pu être
-> extraite et le brief n'en fournit aucun repli. Ce sont des valeurs neutres que j'ai
-> choisies pour que le fichier soit exploitable, **explicitement signalées comme telles**
-> conformément à la consigne (§3 du brief : signaler plutôt que remplacer silencieusement).
-
-### Rayons de bordure — ❌ non extraits
-
-| Token | Valeur neutre | Statut |
-|---|---|---|
-| `--cerba-radius-sm` | `4px` | ⛔ Générique |
-| `--cerba-radius-md` | `8px` | ⛔ Générique |
-| `--cerba-radius-lg` | `16px` | ⛔ Générique |
-| `--cerba-radius-pill` | `999px` | ⛔ Générique |
-
-### Échelle typographique — ❌ non extraite
-
-Échelle neutre en ratio 1.25 (tierce majeure), base 16px.
-
-| Token | Valeur neutre | Statut |
-|---|---|---|
-| `--cerba-text-xs` | `0.75rem` / 12px | ⛔ Générique |
-| `--cerba-text-sm` | `0.875rem` / 14px | ⛔ Générique |
-| `--cerba-text-base` | `1rem` / 16px | ⛔ Générique |
-| `--cerba-text-lg` | `1.25rem` / 20px | ⛔ Générique |
-| `--cerba-text-xl` | `1.5625rem` / 25px | ⛔ Générique |
-| `--cerba-text-2xl` | `1.953rem` / ~31px | ⛔ Générique |
-| `--cerba-text-3xl` | `2.441rem` / ~39px | ⛔ Générique |
-| `--cerba-text-4xl` | `3.052rem` / ~49px | ⛔ Générique |
-
-### Densité d'espacement — ❌ non extraite
-
-Échelle neutre 4px.
-
-| Token | Valeur neutre | Statut |
-|---|---|---|
-| `--cerba-space-1` … `--cerba-space-16` | `4px` × n (4, 8, 12, 16, 24, 32, 48, 64) | ⛔ Générique |
-
-> La densité réelle de Cerba (respiration des sections, rythme vertical) est un marqueur
-> d'identité fort et **elle est totalement inconnue ici**.
+> Le contraste light/bold est le moteur du motif identitaire (§10). Les valeurs exactes
+> restent à confirmer : un couple 300/700 et un couple 400/600 ne produisent pas le même effet.
 
 ---
 
-## 7. Bloc CSS prêt à l'emploi
+## 6. Rayons, échelle, espacement
 
-Les commentaires `SOURCE:` sont volontairement conservés dans le code : ils empêchent
-qu'une valeur de repli passe pour une valeur Cerba au fil des reprises.
+### Rayons — 🟡 ordre de grandeur observé
+
+| Token | Estimation | Observation |
+|---|---|---|
+| `--cerba-radius-card` | `≈ 4px` | Vignettes de spécialité (capture 3) — arrondi léger, franchement pas un `pill` |
+| `--cerba-radius-button` | `≈ 4px` | Bouton « Discover the Group » (capture 2) |
+| `--cerba-radius-circle` | `50%` | 🟢 Boutons-flèche circulaires, portraits ronds |
+
+> Constat utile : l'identité Cerba est **peu arrondie**. Les valeurs `8px` / `16px` que
+> j'avais posées en générique au tour précédent sont trop molles — supprimées.
+
+### Échelle typographique — ⛔ valeurs absolues inconnues
+
+Rapports observés, sans mesure fiable en `px` : titre de page > chiffre-clé > titre de
+section > corps > légende. Les titres de section des captures 1 et 2 semblent **de taille
+identique sur leurs deux lignes**, accentuée ou non — 🟢 la mise en gras ne s'accompagne
+d'aucun changement de corps.
+
+### Espacement — ⛔ non mesurable
+
+Seule observation exploitable : 🟢 les sections alternent `--cerba-surface` et
+`--cerba-surface-alt` en **bandes pleine largeur**, avec une respiration verticale ample.
+
+---
+
+## 7. Bloc CSS
+
+Les commentaires de niveau sont volontairement conservés dans le code.
 
 ```css
 :root {
-  /* --- Couleurs : REPLI DU BRIEF, non extraites du CSS Cerba --- */
-  --cerba-blue-primary: #005CA9;  /* SOURCE: repli brief — À REMPLACER */
-  --cerba-ink:          #1B2B3A;  /* SOURCE: repli brief — À REMPLACER */
-  --cerba-surface:      #FFFFFF;  /* SOURCE: repli brief — À REMPLACER */
-  --cerba-surface-alt:  #F4F8FB;  /* SOURCE: repli brief — À REMPLACER */
-  /* --cerba-secondary:            MANQUANT — aucune source, ne pas inventer */
+  /* --- Couleurs : ESTIMÉES sur captures (niveau B), à confirmer sur le CSS --- */
+  --cerba-navy:         #1B3A6B; /* B ~ fragment accentué, chiffres, nav */
+  --cerba-slate:        #5079A8; /* B ~ fragment non accentué */
+  --cerba-brush:        #82ACD8; /* B ~ SECONDAIRE, motif pinceau */
+  --cerba-cta:          #1E3F94; /* B ~ bouton primaire */
+  --cerba-card-overlay: #2F80C4; /* B ~ voile vignettes */
+  --cerba-surface:      #FFFFFF; /* A  confirmé */
+  --cerba-surface-alt:  #DBE1EF; /* B ~ lavande — PAS le #F4F8FB du repli */
+  --cerba-text-body:    #5C5C5C; /* B ~ gris, pas bleu */
+  /* états succès/alerte/erreur : INCONNUS — ne pas inventer */
 
-  /* Dérivées par calcul depuis le repli, non sourcées */
-  --cerba-blue-hover:   #004A87;
-  --cerba-border:       #D9E4EE;
-  --cerba-muted:        #5A6B7A;
-
-  /* --- Typographie : familles réelles INCONNUES --- */
+  /* --- Typographie : famille INCONNUE --- */
   --cerba-font-sans: system-ui, -apple-system, "Segoe UI", Roboto,
-                     Helvetica, Arial, sans-serif; /* SOURCE: repli brief */
-  --cerba-weight-regular: 400;  /* poids réel non extrait */
-  --cerba-weight-bold:    700;  /* poids réel non extrait */
+                     Helvetica, Arial, sans-serif; /* repli brief */
+  --cerba-weight-light:   300; /* B */
+  --cerba-weight-regular: 400; /* B */
+  --cerba-weight-bold:    700; /* B */
 
-  /* --- Rayons / échelle / espacement : GÉNÉRIQUES, non Cerba --- */
-  --cerba-radius-sm: 4px;
-  --cerba-radius-md: 8px;
-  --cerba-radius-lg: 16px;
-  --cerba-radius-pill: 999px;
+  /* --- Rayons : ordre de grandeur observé --- */
+  --cerba-radius-card:   4px; /* B */
+  --cerba-radius-button: 4px; /* B */
 
-  --cerba-text-xs:   0.75rem;
-  --cerba-text-sm:   0.875rem;
-  --cerba-text-base: 1rem;
-  --cerba-text-lg:   1.25rem;
-  --cerba-text-xl:   1.5625rem;
-  --cerba-text-2xl:  1.953rem;
-  --cerba-text-3xl:  2.441rem;
-  --cerba-text-4xl:  3.052rem;
-
-  --cerba-space-1:  4px;
-  --cerba-space-2:  8px;
-  --cerba-space-3:  12px;
-  --cerba-space-4:  16px;
-  --cerba-space-6:  24px;
-  --cerba-space-8:  32px;
-  --cerba-space-12: 48px;
-  --cerba-space-16: 64px;
+  /* échelle typographique et espacement : NON EXTRAITS, volontairement absents
+     plutôt que remplis de valeurs génériques trompeuses */
 }
 ```
 
 ---
 
-## 8. Logo — ❌ NON TÉLÉCHARGÉ
+## 8. Logo — ⛔ fichier NON TÉLÉCHARGÉ
 
-Cible : `https://www.lab-cerba.com/sites/default/themes/custom/lab/html/public/assets/images/logo.svg`
-→ inaccessible (§2).
+Cible inaccessible :
+`https://www.lab-cerba.com/sites/default/themes/custom/lab/html/public/assets/images/logo.svg`
 
-Conformément à la consigne : **le logo n'a pas été redessiné, ni approximé, ni remplacé par
-un substitut graphique.** Un emplacement neutre est fourni :
+**Le logo n'a pas été redessiné.** Ce que la capture permet seulement de *décrire*, pour que
+le remplacement soit sans ambiguïté :
 
-- `assets/logo-cerba-placeholder.svg` — cadre neutre portant la mention « logo Cerba ».
+- Mot-symbole « Cerba » en bas-de-casse, graisse légère, bleu marine
+- Au-dessus à droite : un groupe de **pastilles rondes disposées en croix**, dans un dégradé
+  allant du cyan clair au marine
+- Proportion d'ensemble nettement horizontale
 
-Il porte l'attribut `data-cerba-placeholder="logo"` pour être retrouvé et remplacé d'un seul
-`grep` le jour où le SVG officiel est disponible.
-
----
-
-## 9. Motif « coup de pinceau » — ❌ NON RÉCUPÉRÉ
-
-Les SVG de motif brush référencés sur la page d'accueil n'ont pas pu être identifiés :
-la page d'accueil elle-même est inaccessible, donc **je ne connais ni leurs URL, ni leur
-nombre, ni leur forme**.
-
-**Aucune forme de pinceau n'a été dessinée.** Un tracé « à peu près similaire » serait une
-invention d'identité visuelle, ce que le brief interdit. L'emplacement reste vide et signalé.
-
-À récupérer lors du déblocage : les `<img src>` / `background-image` / `<use href>` pointant
-vers des SVG sous `/sites/default/themes/custom/lab/` sur `/fr`, puis archiver les fichiers
-tels quels dans `assets/`.
+Emplacement neutre livré : `assets/logo-cerba-placeholder.svg`, portant
+`data-cerba-placeholder="logo"` pour être retrouvé au `grep`. **Cette description ne doit pas
+servir à reconstituer le logo** — elle sert à vérifier qu'on a bien téléchargé le bon fichier.
 
 ---
 
-## 10. Code identitaire des titres — ✅ le seul point sourcé
+## 9. Motif « coup de pinceau » — 🟢 usages identifiés, ⛔ fichiers non récupérés
 
-**Règle :** dans chaque titre, **un seul fragment contigu** est en graisse forte ; tout le
-reste est en graisse normale. Le fragment en gras porte le sens distinctif ; le reste porte
-le descriptif générique.
+**Aucune forme de pinceau n'a été dessinée.** La forme exacte des tracés est une signature
+graphique : la reproduire de mémoire serait l'inventer. Les captures révèlent en revanche
+**trois usages distincts**, ce qui est directement exploitable pour préparer l'intégration :
 
-Exemples relevés (source : brief utilisateur) :
-
-| Titre | Fragment en gras | Position |
+| # | Usage | Observation |
 |---|---|---|
-| **Cerba** Laboratoire de biologie de spécialité | `Cerba` | début |
-| biologie médicale **spécialisée** | `spécialisée` | fin |
-| L'innovation, **composante de notre ADN** | `composante de notre ADN` | fin (après virgule) |
+| 1 | **Élément décoratif autonome** | Grand tracé bleu libre, posé à côté du texte, sans fonction de contenu (capture 1, à droite). Texture de brosse sèche très visible, stries blanches dans l'aplat |
+| 2 | **Masque / calage de photo** | Le tracé passe derrière et devant un portrait détouré rond, créant un effet de superposition (capture 2, les deux blocs) |
+| 3 | **Bord déchiré de vignette** | Sur les vignettes de spécialité, le bandeau bleu du bas a une **arête supérieure en coup de pinceau**, pas une ligne droite (capture 3) |
 
-**La position du fragment n'est pas fixe** — c'est la valeur sémantique qui décide, pas
-l'emplacement. Ce qui est invariant : *exactement un* fragment gras, *jamais zéro, jamais deux*.
+Caractéristiques communes 🟢 : tracé unique d'un seul geste, opacité partielle laissant voir
+ce qu'il y a dessous, texture de brosse sèche conservée (ce n'est pas un aplat lissé).
+
+À récupérer au déblocage : les `<img>`, `background-image` et `<use href>` pointant vers des
+SVG sous `/sites/default/themes/custom/lab/`, à archiver tels quels dans `assets/`. Il y en a
+**au moins trois différents**, un par usage.
+
+---
+
+## 10. Code identitaire des titres — 🟢 CONFIRMÉ ET ENRICHI
+
+Les captures confirment la règle du brief **et la corrigent sur un point important**.
+
+### La règle
+
+Dans chaque titre, **un seul fragment contigu** est accentué. L'accentuation joue sur
+**deux dimensions simultanées** :
+
+1. la **graisse** — le fragment passe en gras, le reste reste léger ;
+2. la **couleur** — le fragment passe en marine, le reste reste en bleu intermédiaire.
+
+> ⚠️ **Correction par rapport à la version précédente de ce fichier** : j'y décrivais un
+> contraste de graisse seul. Les captures montrent que le changement de couleur est
+> systématique et tout aussi porteur. Un titre qui ne joue que sur la graisse n'est pas
+> conforme.
+
+Le **corps de texte ne change pas** : 🟢 les deux fragments sont à la même taille.
+
+### Position du fragment : libre
+
+| Titre | Fragment accentué | Position | Source |
+|---|---|---|---|
+| **Cerba** Laboratoire de biologie de spécialité | `Cerba` | début | Brief |
+| biologie médicale **spécialisée** | `spécialisée` | fin | Brief |
+| L'innovation, **composante de notre ADN** | `composante de notre ADN` | fin | Brief |
+| **Tailored and accessible** guidance for clinicians | `Tailored and accessible` | début | 🟢 Capture 2 |
+| The largest European laboratory **for specialized medical biology** | `for specialized medical biology` | fin | 🟢 Capture 1 |
+| Expertise reinforced by the **Cerba HealthCare Group** | `Cerba HealthCare Group` | fin | 🟢 Capture 2 |
+
+C'est le **sens** qui décide, pas l'emplacement : l'accent porte le distinctif (la marque, la
+spécialité, la promesse), le reste porte le générique.
+
+### Retour à la ligne
+
+🟢 Les titres observés sont composés **sur deux lignes**, avec la coupure placée pour que le
+fragment accentué démarre une ligne. Ce n'est pas une règle absolue : dans « Expertise
+reinforced by the **Cerba HealthCare Group** », l'accent démarre en milieu de ligne et se
+poursuit sur la suivante. **La sémantique prime sur l'alignement.**
+
+### Extension au corps de texte
+
+🟢 Le motif déborde des titres : dans les paragraphes, Cerba met aussi en gras un fragment
+porteur (« *Europe's **largest specialized clinical pathology laboratory***… »). Même
+principe — une emphase, contiguë, sémantique.
 
 ### Application
 
 ```css
-/* Titre : graisse normale par défaut — c'est le fragment qui se détache, pas le titre entier */
+/* Le titre est léger par défaut : c'est le fragment qui se détache, pas le titre entier */
 .cerba-title {
   font-family: var(--cerba-font-sans);
-  font-weight: var(--cerba-weight-regular);
-  color: var(--cerba-ink);
-  line-height: 1.2;
+  font-weight: var(--cerba-weight-light);
+  color: var(--cerba-slate);
+  line-height: 1.25;
 }
-.cerba-title--h1 { font-size: var(--cerba-text-4xl); }
-.cerba-title--h2 { font-size: var(--cerba-text-3xl); }
-.cerba-title--h3 { font-size: var(--cerba-text-2xl); }
 
-/* L'unique fragment accentué */
-.cerba-title__accent { font-weight: var(--cerba-weight-bold); }
+/* L'unique fragment accentué : graisse ET couleur, les deux ensemble */
+.cerba-title__accent {
+  font-weight: var(--cerba-weight-bold);
+  color: var(--cerba-navy);
+  /* pas de font-size ici : le corps est identique — vérifié sur captures */
+}
+
+/* Emphase dans le corps de texte : même logique, couleur du texte conservée */
+.cerba-body strong {
+  font-weight: var(--cerba-weight-bold);
+  color: inherit;
+}
 ```
 
 ```html
-<h1 class="cerba-title cerba-title--h1">
-  <strong class="cerba-title__accent">Cerba</strong> Laboratoire de biologie de spécialité
-</h1>
-
-<h2 class="cerba-title cerba-title--h2">
-  biologie médicale <strong class="cerba-title__accent">spécialisée</strong>
+<h2 class="cerba-title">
+  The largest European laboratory
+  <strong class="cerba-title__accent">for specialized medical biology</strong>
 </h2>
 
-<h2 class="cerba-title cerba-title--h2">
-  L'innovation, <strong class="cerba-title__accent">composante de notre ADN</strong>
+<h2 class="cerba-title">
+  <strong class="cerba-title__accent">Tailored and accessible</strong>
+  guidance for clinicians
 </h2>
 ```
 
-Composant réutilisable — l'API force la règle : le titre se déclare en trois morceaux
-(avant / accent / après), donc il est impossible d'oublier l'accent ou d'en mettre deux.
+Composant réutilisable — l'API impose la règle : le titre se déclare en trois morceaux, donc
+il est structurellement impossible d'oublier l'accent ou d'en poser deux.
 
 ```jsx
-// before et after sont optionnels ; accent est obligatoire.
-export function CerbaTitle({ as: Tag = 'h2', level = 'h2', before, accent, after }) {
+// before / after optionnels ; accent obligatoire et unique.
+// breakBefore insère la coupure de ligne observée sur le site.
+export function CerbaTitle({ as: Tag = 'h2', before, accent, after, breakBefore = true }) {
   if (!accent) throw new Error('CerbaTitle: un fragment "accent" est obligatoire.');
   return (
-    <Tag className={`cerba-title cerba-title--${level}`}>
-      {before && <>{before} </>}
+    <Tag className="cerba-title">
+      {before && <>{before}{breakBefore ? <br /> : ' '}</>}
       <strong className="cerba-title__accent">{accent}</strong>
       {after && <> {after}</>}
     </Tag>
   );
 }
 
-// <CerbaTitle as="h1" level="h1" accent="Cerba" after="Laboratoire de biologie de spécialité" />
-// <CerbaTitle before="biologie médicale" accent="spécialisée" />
+// <CerbaTitle before="The largest European laboratory" accent="for specialized medical biology" />
+// <CerbaTitle accent="Tailored and accessible" after="guidance for clinicians" breakBefore={false} />
 // <CerbaTitle before="L'innovation," accent="composante de notre ADN" />
 ```
 
-> Cette règle s'applique à **tous** les titres de l'application. Le repo ne contient
-> aujourd'hui aucune interface : la règle est donc livrée sous forme applicable
-> (CSS + composant), à câbler sur les titres au fur et à mesure de leur création.
+Cette règle s'applique à **tous** les titres de l'application. Le repo ne contient aujourd'hui
+aucune interface : elle est livrée prête à câbler.
 
 ---
 
-## 11. Checklist de reprise (dès que l'accès est ouvert)
+## 11. Checklist de reprise (dès que l'accès réseau est ouvert)
 
-1. `curl https://www.lab-cerba.com/fr` → relever le `<link rel="stylesheet">` du thème
-   `/sites/default/themes/custom/lab/`.
-2. Extraire du CSS : bleu primaire, secondaire(s), fonds, texte — **avec le sélecteur et la
-   ligne exacte** de chaque déclaration, à reporter dans la colonne Source.
-3. Relever les `@font-face` / `font-family` réels + les deux poids du motif §10.
-4. Relever `border-radius`, l'échelle `font-size`, et le rythme d'espacement (§6).
+1. `curl https://www.lab-cerba.com/fr` → relever le `<link rel="stylesheet">` du thème.
+2. Échantillonner les hexa réels et **corriger les huit estimations du §3.2**, en notant le
+   sélecteur exact de chaque déclaration.
+3. Relever le `font-family` réel et les **trois** poids (§5).
+4. Mesurer l'échelle typographique et le rythme d'espacement, absents du §6.
 5. `curl .../assets/images/logo.svg` → remplacer `assets/logo-cerba-placeholder.svg`,
    supprimer l'attribut `data-cerba-placeholder`.
-6. Identifier et télécharger les SVG « brush » de la home (§9).
-7. Retirer les mentions ⚠️/⛔ **uniquement** pour les lignes réellement remplacées, et
-   mettre à jour le tableau §1.
+6. Récupérer les **trois** SVG brush correspondant aux usages du §9.
+7. Relever les couleurs d'état, absentes des captures.
+8. Faire passer en 🟢 les seules lignes réellement vérifiées, et mettre à jour le §1.
