@@ -60,8 +60,9 @@
     cursor: pointer; position: relative; flex: none;
     border: 2px solid rgba(249, 242, 233, 0.3);
     background: transparent;
-    color: transparent;
-    font-size: 13px; font-weight: 700; line-height: 1;
+    color: rgba(249, 242, 233, 0.45);   /* numéro d'étape visible sans survol */
+    font-size: 12px; font-weight: 700; line-height: 1;
+    padding: 0;
     transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
     -webkit-tap-highlight-color: transparent;
   }
@@ -73,6 +74,7 @@
   }
   .dot.prochaine {
     border-color: var(--terra);
+    color: var(--terra);
     animation: pulseTerra 2.2s ease-in-out infinite;
   }
   @keyframes pulseTerra {
@@ -102,7 +104,30 @@
   }
   .dot:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* ---------- Lignes d'invités ---------- */
+  /* Séparateur de phases (préparation | production | diffusion) */
+  .sep-phase {
+    width: 2px; align-self: stretch; flex: none;
+    background: rgba(249, 242, 233, 0.18);
+    border-radius: 1px;
+  }
+
+  /* ---------- En-tête de colonnes : libellés inclinés à 45° ---------- */
+  .entete-etapes { margin-bottom: 2px; }
+  .entete-etapes .zone-dots { height: 86px; align-items: flex-end; overflow: visible; }
+  .col-label { width: 26px; height: 100%; position: relative; flex: none; }
+  .col-label > span {
+    position: absolute; bottom: 0; left: 14px;
+    transform: rotate(-45deg); transform-origin: 0 100%;
+    white-space: nowrap; font-size: 11px; letter-spacing: 0.4px;
+    color: rgba(249, 242, 233, 0.55);
+  }
+  .col-label.active > span { color: rgba(249, 242, 233, 0.85); }
+  @media (max-width: 720px) {
+    .entete-etapes { display: none; }
+    .sep-phase { display: none; }
+  }
+
+  /* ---------- Lignes ---------- */
   .ligne-invite { animation: rowIn 250ms ease backwards; }
   @keyframes rowIn {
     from { opacity: 0; transform: translateY(-10px); }
@@ -115,6 +140,26 @@
     border-radius: 999px; padding: 2px 9px;
     font-size: 12px; font-weight: 700; white-space: nowrap;
     box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* ---------- Titres de section ---------- */
+  .titre-section {
+    display: flex; align-items: baseline; gap: 10px;
+    margin: 34px 0 12px;
+  }
+  .titre-section .libelle {
+    font-family: "Oswald", sans-serif;
+    font-size: 16px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 2.5px;
+  }
+  .titre-section .compte {
+    font-size: 12px; color: rgba(249, 242, 233, 0.5);
+  }
+  .titre-section::after {
+    content: ""; flex: 1; height: 3px;
+    background: var(--terra); border-radius: 2px;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    margin-left: 6px; align-self: center;
   }
 
   /* ---------- XP flottant ---------- */
@@ -130,7 +175,7 @@
     100% { opacity: 0; transform: translateY(-48px); }
   }
 
-  /* ---------- Confettis (étape 9 uniquement, 1,5 s max) ---------- */
+  /* ---------- Confettis (diffusion uniquement, 1,5 s max) ---------- */
   .confetti {
     position: fixed; top: -12px; z-index: 55; pointer-events: none;
     width: 9px; height: 14px;
@@ -204,17 +249,19 @@
   .nom-invite { cursor: pointer; transition: color 150ms ease; }
   .nom-invite:hover { color: var(--menthe); }
 
-  /* Grille de ligne : nom | pastilles | date | alerte */
+  /* Grille de ligne : nom | pastilles | date | alerte.
+     La colonne « nom » est FIXE (200 px) pour que les pastilles soient
+     alignées verticalement d'une ligne à l'autre, et avec l'en-tête. */
   .grille-ligne {
     display: grid;
-    grid-template-columns: minmax(140px, 200px) 1fr auto auto;
+    grid-template-columns: 200px 1fr auto auto;
     gap: 14px; align-items: center;
   }
   @media (max-width: 720px) {
     .grille-ligne { grid-template-columns: 1fr auto; }
     .zone-dots { grid-column: 1 / -1; }
   }
-  .zone-dots { display: flex; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
+  .zone-dots { display: flex; flex-wrap: wrap; gap: 8px; row-gap: 10px; align-items: center; }
 </style>
 </head>
 <body>
@@ -228,18 +275,52 @@ const { useState, useEffect, useReducer, useRef, useMemo } = React;
    CONSTANTES MÉTIER
    ================================================================ */
 
-// Les 9 étapes du pipeline, dans l'ordre, avec leur poids d'XP.
+// Les 9 étapes du pipeline invité, dans l'ordre, avec leur poids d'XP.
 const ETAPES = [
-  { id: 1, label: "Contacté",           xp: 10 },
-  { id: 2, label: "Trame rédigée",      xp: 20 },
-  { id: 3, label: "Trame envoyée",      xp: 10 },
-  { id: 4, label: "Trame validée",      xp: 15 },
-  { id: 5, label: "RDV calé",           xp: 15 },
-  { id: 6, label: "Enregistrement fait",xp: 40 },
-  { id: 7, label: "Montage fait",       xp: 35 },
-  { id: 8, label: "Livrable envoyé",    xp: 20 },
-  { id: 9, label: "Diffusé",            xp: 50 },
+  { id: 1, label: "Contacté",            xp: 10 },
+  { id: 2, label: "Trame rédigée",       xp: 20 },
+  { id: 3, label: "Trame envoyée",       xp: 10 },
+  { id: 4, label: "Trame validée",       xp: 15 },
+  { id: 5, label: "RDV calé",            xp: 15 },
+  { id: 6, label: "Enregistrement fait", xp: 40 },
+  { id: 7, label: "Montage fait",        xp: 35 },
+  { id: 8, label: "Livrable envoyé",     xp: 20 },
+  { id: 9, label: "Diffusé",             xp: 50 },
 ];
+
+// Pipeline partenariat (5 étapes) — libellés modifiables à volonté.
+const ETAPES_PARTENARIAT = [
+  { id: 1, label: "Contacté",             xp: 10 },
+  { id: 2, label: "Échange fait",         xp: 15 },
+  { id: 3, label: "Proposition envoyée",  xp: 10 },
+  { id: 4, label: "Accord signé",         xp: 35 },
+  { id: 5, label: "Partenariat actif",    xp: 30 },
+];
+
+// Pipeline sponsor (5 étapes) — libellés modifiables à volonté.
+const ETAPES_SPONSOR = [
+  { id: 1, label: "Contacté",         xp: 10 },
+  { id: 2, label: "Pitch envoyé",     xp: 15 },
+  { id: 3, label: "Négociation",      xp: 15 },
+  { id: 4, label: "Contrat signé",    xp: 40 },
+  { id: 5, label: "Campagne lancée",  xp: 30 },
+];
+
+// Configuration des trois sections. `groupes` = ids d'étape après lesquels
+// on trace un séparateur de phase (préparation | production | diffusion).
+// `exceptionAlerte` = seuil allongé quand l'attente est normale à une étape.
+const COLLECTIONS = {
+  guests:   { titre: "Invités",      titreFiche: "invité",     etapes: ETAPES,
+              groupes: [5, 8], avecDate: true,
+              exceptionAlerte: { etape: 3, jours: 21 },
+              placeholder: "Ajoute un invité et appuie sur Entrée…" },
+  partners: { titre: "Partenariats", titreFiche: "partenaire", etapes: ETAPES_PARTENARIAT,
+              groupes: [], avecDate: false, exceptionAlerte: null,
+              placeholder: "Ajoute un partenaire et appuie sur Entrée…" },
+  sponsors: { titre: "Sponsors",     titreFiche: "sponsor",    etapes: ETAPES_SPONSOR,
+              groupes: [], avecDate: false, exceptionAlerte: null,
+              placeholder: "Ajoute un sponsor et appuie sur Entrée…" },
+};
 
 // Seuils d'XP cumulés pour passer chaque niveau, et titres successifs.
 const SEUILS  = [100, 250, 500, 850, 1300, 1900, 2600, 3500];
@@ -249,6 +330,7 @@ const TITRES  = [
 ];
 
 // Définition des badges déblocables (id stable + condition sur l'état global).
+// Les badges restent calculés sur les invités : c'est le cœur du métier.
 const BADGES = [
   { id: "trame-eclair", nom: "Trame éclair", desc: "Étapes 2 → 4 en moins de 7 jours",
     test: (etat) => etat.guests.some((g) => {
@@ -256,8 +338,8 @@ const BADGES = [
       return d2 && d4 && (new Date(d4) - new Date(d2)) < 7 * 86400000;
     }) },
   { id: "zero-blocage", nom: "Zéro blocage", desc: "Aucun invité en alerte",
-    test: (etat) => etat.guests.some((g) => maxEtape(g) > 0) &&
-                    !etat.guests.some((g) => joursBlocage(g) !== null) },
+    test: (etat) => etat.guests.some((g) => maxEtape(g, ETAPES) > 0) &&
+                    !etat.guests.some((g) => joursBlocage(g, COLLECTIONS.guests) !== null) },
   { id: "stock-plein", nom: "Stock plein", desc: "3 épisodes prêts simultanément",
     test: (etat) => etat.guests.filter((g) => g.steps["8"] && !g.steps["9"]).length >= 3 },
   { id: "marathon", nom: "Marathon", desc: "10 épisodes diffusés",
@@ -301,10 +383,11 @@ function uuid() {
     "id-" + Date.now() + "-" + Math.random().toString(36).slice(2);
 }
 
-// Squelette d'un invité neuf : rien d'autre que le nom n'est demandé.
-function nouvelInvite(nom) {
+// Squelette d'une entrée neuve (invité, partenaire ou sponsor) :
+// rien d'autre que le nom n'est demandé.
+function nouvelleEntree(nom, etapes) {
   const steps = {};
-  ETAPES.forEach((e) => { steps[String(e.id)] = null; });
+  etapes.forEach((e) => { steps[String(e.id)] = null; });
   return {
     id: uuid(), name: nom, format: null, note: "", airDate: null,
     steps, createdAt: new Date().toISOString(), archived: false,
@@ -312,32 +395,33 @@ function nouvelInvite(nom) {
 }
 
 // Numéro de la plus haute étape validée (0 si aucune).
-function maxEtape(g) {
+function maxEtape(entree, etapes) {
   let m = 0;
-  ETAPES.forEach((e) => { if (g.steps[String(e.id)]) m = e.id; });
+  etapes.forEach((e) => { if (entree.steps[String(e.id)]) m = e.id; });
   return m;
 }
 
 // Date ISO de la validation la plus récente (null si aucune).
-function derniereValidation(g) {
+function derniereValidation(entree) {
   let d = null;
-  ETAPES.forEach((e) => {
-    const v = g.steps[String(e.id)];
+  Object.values(entree.steps).forEach((v) => {
     if (v && (!d || v > d)) d = v;
   });
   return d;
 }
 
-// Nombre de jours de blocage si l'invité est en alerte, sinon null.
-// 14 jours par défaut, 21 si la dernière étape validée est la 3
-// (« Trame envoyée » : l'attente y est normale). Les diffusés et les
-// invités sans étape validée n'alertent jamais.
-function joursBlocage(g) {
-  if (g.steps["9"]) return null;
-  const derniere = derniereValidation(g);
+// Nombre de jours de blocage si l'entrée est en alerte, sinon null.
+// 14 jours par défaut ; seuil allongé si `exceptionAlerte` s'applique
+// (invités : 21 jours après « Trame envoyée », l'attente y est normale).
+// Les entrées terminées ou sans étape validée n'alertent jamais.
+function joursBlocage(entree, config) {
+  const finale = config.etapes[config.etapes.length - 1].id;
+  if (entree.steps[String(finale)]) return null;
+  const derniere = derniereValidation(entree);
   if (!derniere) return null;
   const jours = Math.floor((Date.now() - new Date(derniere).getTime()) / 86400000);
-  const seuil = maxEtape(g) === 3 ? 21 : 14;
+  const exc = config.exceptionAlerte;
+  const seuil = exc && maxEtape(entree, config.etapes) === exc.etape ? exc.jours : 14;
   return jours >= seuil ? jours : null;
 }
 
@@ -373,21 +457,27 @@ function infosNiveau(xp) {
    ================================================================ */
 
 const ETAT_INITIAL = {
-  version: 1,
+  version: 2,
   guests: [],
+  partners: [],
+  sponsors: [],
   stats: { xp: 0, badges: [], lastActiveWeek: null, streak: 0 },
 };
 
-// Recale un état importé / chargé sur le schéma attendu (champs manquants).
+// Recale un état importé / chargé sur le schéma attendu : les champs
+// manquants sont ajoutés (une data v1 sans partners/sponsors reste valide).
 function normaliser(data) {
   const base = JSON.parse(JSON.stringify(ETAT_INITIAL));
   if (!data || typeof data !== "object") return base;
-  const etat = { ...base, ...data };
+  const etat = { ...base, ...data, version: 2 };
   etat.stats = { ...base.stats, ...(data.stats || {}) };
-  etat.guests = Array.isArray(data.guests)
-    ? data.guests.map((g) => ({ ...nouvelInvite(g.name || "Sans nom"), ...g,
-        steps: { ...nouvelInvite("").steps, ...(g.steps || {}) } }))
-    : [];
+  Object.keys(COLLECTIONS).forEach((cle) => {
+    const defs = COLLECTIONS[cle].etapes;
+    etat[cle] = Array.isArray(data[cle])
+      ? data[cle].map((g) => ({ ...nouvelleEntree(g.name || "Sans nom", defs), ...g,
+          steps: { ...nouvelleEntree("", defs).steps, ...(g.steps || {}) } }))
+      : [];
+  });
   return etat;
 }
 
@@ -409,49 +499,54 @@ function majBadges(etat) {
 }
 
 function reducer(etat, action) {
+  // `action.collection` désigne la liste visée : guests, partners ou sponsors.
+  const defs = action.collection ? COLLECTIONS[action.collection].etapes : null;
+
   switch (action.type) {
 
-    case "AJOUTER_INVITE":
-      return { ...etat, guests: [...etat.guests, nouvelInvite(action.nom)] };
+    case "AJOUTER":
+      return { ...etat, [action.collection]:
+        [...etat[action.collection], nouvelleEntree(action.nom, defs)] };
 
     // Valide une liste d'étapes (cascade incluse) et crédite l'XP.
     case "VALIDER_ETAPES": {
       const dateISO = new Date().toISOString();
       let xpGagnee = 0;
-      const guests = etat.guests.map((g) => {
-        if (g.id !== action.guestId) return g;
+      const liste = etat[action.collection].map((g) => {
+        if (g.id !== action.entryId) return g;
         const steps = { ...g.steps };
         action.etapes.forEach((num) => {
           if (!steps[String(num)]) {
             steps[String(num)] = dateISO;
-            xpGagnee += ETAPES[num - 1].xp;
+            xpGagnee += defs.find((e) => e.id === num).xp;
           }
         });
         return { ...g, steps };
       });
       const stats = majSerie({ ...etat.stats, xp: etat.stats.xp + xpGagnee });
-      return majBadges({ ...etat, guests, stats });
+      return majBadges({ ...etat, [action.collection]: liste, stats });
     }
 
     // Annule la dernière étape validée : XP retirée, sans pénalité.
     case "ANNULER_ETAPE": {
       let xpRetiree = 0;
-      const guests = etat.guests.map((g) => {
-        if (g.id !== action.guestId) return g;
+      const liste = etat[action.collection].map((g) => {
+        if (g.id !== action.entryId) return g;
         const steps = { ...g.steps, [String(action.etape)]: null };
-        xpRetiree = ETAPES[action.etape - 1].xp;
+        xpRetiree = defs.find((e) => e.id === action.etape).xp;
         return { ...g, steps };
       });
       const stats = { ...etat.stats, xp: Math.max(0, etat.stats.xp - xpRetiree) };
-      return { ...etat, guests, stats };
+      return { ...etat, [action.collection]: liste, stats };
     }
 
-    case "MODIFIER_INVITE":
-      return { ...etat, guests: etat.guests.map((g) =>
-        g.id === action.guestId ? { ...g, ...action.champs } : g) };
+    case "MODIFIER":
+      return { ...etat, [action.collection]: etat[action.collection].map((g) =>
+        g.id === action.entryId ? { ...g, ...action.champs } : g) };
 
-    case "SUPPRIMER_INVITE":
-      return { ...etat, guests: etat.guests.filter((g) => g.id !== action.guestId) };
+    case "SUPPRIMER":
+      return { ...etat, [action.collection]:
+        etat[action.collection].filter((g) => g.id !== action.entryId) };
 
     // Remplacement complet (import JSON, après confirmation).
     case "IMPORTER":
@@ -464,6 +559,7 @@ function reducer(etat, action) {
 
 /* ================================================================
    COMPOSANT : StepDot — une pastille d'étape
+   Le numéro d'étape est visible sans survol ; validée = coche menthe.
    ================================================================ */
 function StepDot({ etape, dateValidation, estProchaine, delaiPop, onClick }) {
   const validee = !!dateValidation;
@@ -482,43 +578,68 @@ function StepDot({ etape, dateValidation, estProchaine, delaiPop, onClick }) {
       onClick={onClick}
       aria-label={tip}
     >
-      {validee ? "✓" : ""}
+      {validee ? "✓" : etape.id}
     </button>
   );
 }
 
 /* ================================================================
-   COMPOSANT : GuestRow — une ligne par invité
+   COMPOSANT : EnTeteEtapes — libellés de colonnes inclinés à 45°,
+   alignés sur les pastilles des lignes (masqués sur mobile).
    ================================================================ */
-function GuestRow({ invite, animations, onClicEtape, onClicNom }) {
-  const blocage = joursBlocage(invite);
-  const prochaine = maxEtape(invite) + 1; // première étape non validée
+function EnTeteEtapes({ config }) {
+  return (
+    <div className="entete-etapes grille-ligne" style={{ padding: "0 16px", border: "1px solid transparent" }}>
+      <div />
+      <div className="zone-dots" style={{ flexWrap: "nowrap" }}>
+        {config.etapes.map((e) => (
+          <React.Fragment key={e.id}>
+            <div className="col-label"><span>{e.label}</span></div>
+            {config.groupes.includes(e.id) && <div className="sep-phase" style={{ height: "26px", alignSelf: "flex-end" }} />}
+          </React.Fragment>
+        ))}
+      </div>
+      <div /><div />
+    </div>
+  );
+}
+
+/* ================================================================
+   COMPOSANT : GuestRow — une ligne par entrée (invité, partenaire,
+   sponsor : même mécanique, pipeline différent).
+   ================================================================ */
+function GuestRow({ entree, config, animations, onClicEtape, onClicNom }) {
+  const blocage = joursBlocage(entree, config);
+  const prochaine = maxEtape(entree, config.etapes) + 1; // première étape non validée
 
   return (
     <div className="carte ligne-invite grille-ligne" style={{ padding: "12px 16px", marginBottom: "12px" }}>
       {/* Nom : ouvre le panneau latéral */}
       <div className="nom-invite oswald" style={{ fontSize: "17px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-           onClick={() => onClicNom(invite.id)} title="Ouvrir la fiche">
-        {invite.name}
+           onClick={() => onClicNom(entree.id)} title="Ouvrir la fiche">
+        {entree.name}
       </div>
 
-      {/* Les 9 pastilles ; passent sur deux rangées si l'écran est étroit */}
+      {/* Les pastilles ; passent sur deux rangées si l'écran est étroit.
+          Les séparateurs marquent les phases du pipeline. */}
       <div className="zone-dots">
-        {ETAPES.map((e) => (
-          <StepDot
-            key={e.id}
-            etape={e}
-            dateValidation={invite.steps[String(e.id)]}
-            estProchaine={e.id === prochaine}
-            delaiPop={animations && animations[e.id]}
-            onClick={(evt) => onClicEtape(invite, e.id, evt)}
-          />
+        {config.etapes.map((e) => (
+          <React.Fragment key={e.id}>
+            <StepDot
+              etape={e}
+              dateValidation={entree.steps[String(e.id)]}
+              estProchaine={e.id === prochaine}
+              delaiPop={animations && animations[e.id]}
+              onClick={(evt) => onClicEtape(entree, e.id, evt)}
+            />
+            {config.groupes.includes(e.id) && <div className="sep-phase" />}
+          </React.Fragment>
         ))}
       </div>
 
-      {/* Date de diffusion prévue */}
+      {/* Date de diffusion prévue (invités uniquement) */}
       <div style={{ fontSize: "13px", color: "rgba(249,242,233,0.65)", minWidth: "70px", textAlign: "right" }}>
-        {invite.airDate ? formatDateFR(invite.airDate) : ""}
+        {config.avecDate && entree.airDate ? formatDateFR(entree.airDate) : ""}
       </div>
 
       {/* Alerte de blocage */}
@@ -599,46 +720,48 @@ function Header({ etat, onExport, onImport }) {
 }
 
 /* ================================================================
-   COMPOSANT : SidePanel — fiche invité (jamais imposée)
+   COMPOSANT : SidePanel — fiche (jamais imposée)
    ================================================================ */
-function SidePanel({ invite, onModifier, onSupprimer, onFermer }) {
-  if (!invite) return null;
+function SidePanel({ entree, config, onModifier, onSupprimer, onFermer }) {
+  if (!entree) return null;
   return (
     <React.Fragment>
       <div className="voile" onClick={onFermer} />
       <div className="panneau">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span className="oswald" style={{ fontSize: "20px", fontWeight: 600 }}>Fiche invité</span>
+          <span className="oswald" style={{ fontSize: "20px", fontWeight: 600 }}>Fiche {config.titreFiche}</span>
           <button className="btn-discret" onClick={onFermer}>Fermer</button>
         </div>
 
         <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
           Nom
-          <input className="champ" style={{ marginTop: "6px" }} value={invite.name}
-                 onChange={(e) => onModifier(invite.id, { name: e.target.value })} />
+          <input className="champ" style={{ marginTop: "6px" }} value={entree.name}
+                 onChange={(e) => onModifier(entree.id, { name: e.target.value })} />
         </label>
 
-        <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
-          Diffusion prévue
-          <input className="champ" style={{ marginTop: "6px" }} type="date"
-                 value={invite.airDate ? invite.airDate.slice(0, 10) : ""}
-                 onChange={(e) => onModifier(invite.id, { airDate: e.target.value || null })} />
-        </label>
+        {config.avecDate && (
+          <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
+            Diffusion prévue
+            <input className="champ" style={{ marginTop: "6px" }} type="date"
+                   value={entree.airDate ? entree.airDate.slice(0, 10) : ""}
+                   onChange={(e) => onModifier(entree.id, { airDate: e.target.value || null })} />
+          </label>
+        )}
 
         <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
           Note
-          <input className="champ" style={{ marginTop: "6px" }} value={invite.note} placeholder="Une ligne, pas plus"
-                 onChange={(e) => onModifier(invite.id, { note: e.target.value })} />
+          <input className="champ" style={{ marginTop: "6px" }} value={entree.note} placeholder="Une ligne, pas plus"
+                 onChange={(e) => onModifier(entree.id, { note: e.target.value })} />
         </label>
 
         <div style={{ marginTop: "auto" }}>
           <button className="btn-discret btn-danger" style={{ width: "100%" }}
                   onClick={() => {
-                    if (window.confirm("Supprimer " + invite.name + " ? C'est définitif.")) {
-                      onSupprimer(invite.id);
+                    if (window.confirm("Supprimer " + entree.name + " ? C'est définitif.")) {
+                      onSupprimer(entree.id);
                     }
                   }}>
-            Supprimer cet invité
+            Supprimer
           </button>
         </div>
       </div>
@@ -670,6 +793,18 @@ function BadgeShelf({ badgesGagnes }) {
 }
 
 /* ================================================================
+   COMPOSANT : TitreSection — bandeau de section, style riso
+   ================================================================ */
+function TitreSection({ libelle, compte }) {
+  return (
+    <div className="titre-section">
+      <span className="libelle">{libelle}</span>
+      {compte !== undefined && <span className="compte">{compte}</span>}
+    </div>
+  );
+}
+
+/* ================================================================
    COMPOSANT RACINE : App
    ================================================================ */
 function App() {
@@ -679,11 +814,11 @@ function App() {
   const [erreurStockage, setErreurStockage] = useState(chargement.erreur);
 
   // UI locale (jamais persistée)
-  const [nomSaisi, setNomSaisi] = useState("");
-  const [ficheOuverte, setFicheOuverte] = useState(null);     // id d'invité ou null
+  const [saisies, setSaisies] = useState({ guests: "", partners: "", sponsors: "" });
+  const [ficheOuverte, setFicheOuverte] = useState(null);     // {collection, id} ou null
   const [archivesOuvertes, setArchivesOuvertes] = useState(false);
   const [flotteurs, setFlotteurs] = useState([]);             // XP flottant [{id,x,y,txt}]
-  const [animations, setAnimations] = useState({});           // {guestId: {etape: index}}
+  const [animations, setAnimations] = useState({});           // {entryId: {etape: index}}
 
   // Persistance à chaque mutation, sans bouton « enregistrer ».
   useEffect(() => {
@@ -693,39 +828,40 @@ function App() {
 
   /* ---------- Interactions pastilles ---------- */
 
-  function clicEtape(invite, numero, evt) {
-    const max = maxEtape(invite);
-    const validee = !!invite.steps[String(numero)];
+  function clicEtape(collection, entree, numero, evt) {
+    const config = COLLECTIONS[collection];
+    const max = maxEtape(entree, config.etapes);
+    const validee = !!entree.steps[String(numero)];
 
     if (validee) {
       // Un clic sur la DERNIÈRE étape validée l'annule (undo silencieux).
-      if (numero === max) dispatch({ type: "ANNULER_ETAPE", guestId: invite.id, etape: numero });
+      if (numero === max) dispatch({ type: "ANNULER_ETAPE", collection, entryId: entree.id, etape: numero });
       return;
     }
 
     // Validation avec cascade : toutes les étapes vides jusqu'à celle cliquée.
     const aValider = [];
     for (let n = 1; n <= numero; n++) {
-      if (!invite.steps[String(n)]) aValider.push(n);
+      if (!entree.steps[String(n)]) aValider.push(n);
     }
     if (aValider.length === 0) return;
 
-    dispatch({ type: "VALIDER_ETAPES", guestId: invite.id, etapes: aValider });
+    dispatch({ type: "VALIDER_ETAPES", collection, entryId: entree.id, etapes: aValider });
 
     // Animation en chaîne : 60 ms de décalage entre chaque pastille.
     const carte = {};
     aValider.forEach((n, i) => { carte[n] = i; });
-    setAnimations({ [invite.id]: carte });
+    setAnimations({ [entree.id]: carte });
     setTimeout(() => setAnimations({}), aValider.length * 60 + 400);
 
     // XP flottant au point de clic.
-    const total = aValider.reduce((s, n) => s + ETAPES[n - 1].xp, 0);
+    const total = aValider.reduce((s, n) => s + config.etapes.find((e) => e.id === n).xp, 0);
     const idF = uuid();
     setFlotteurs((f) => [...f, { id: idF, x: evt.clientX, y: evt.clientY - 20, txt: "+" + total + " XP" }]);
     setTimeout(() => setFlotteurs((f) => f.filter((x) => x.id !== idF)), 1000);
 
-    // Célébration uniquement à la diffusion (étape 9).
-    if (aValider.includes(9)) lancerConfettis();
+    // Célébration uniquement à la diffusion d'un épisode (étape 9 invité).
+    if (collection === "guests" && aValider.includes(9)) lancerConfettis();
   }
 
   // Confettis dans les 4 couleurs de la marque, 1,5 s, non bloquants.
@@ -743,14 +879,14 @@ function App() {
     }
   }
 
-  /* ---------- Ajout d'invité : un champ, Entrée, c'est tout ---------- */
+  /* ---------- Ajout : un champ par section, Entrée, c'est tout ---------- */
 
-  function ajouterInvite(e) {
+  function ajouter(collection, e) {
     e.preventDefault();
-    const nom = nomSaisi.trim();
+    const nom = saisies[collection].trim();
     if (!nom) return;
-    dispatch({ type: "AJOUTER_INVITE", nom });
-    setNomSaisi("");
+    dispatch({ type: "AJOUTER", collection, nom });
+    setSaisies({ ...saisies, [collection]: "" });
   }
 
   /* ---------- Export / Import JSON ---------- */
@@ -792,23 +928,51 @@ function App() {
     lecteur.readAsText(fichier);
   }
 
-  /* ---------- Tri : les plus avancés en haut, diffusés en archives ---------- */
+  /* ---------- Tri : les plus avancés en haut ---------- */
 
-  const actifs = etat.guests
-    .filter((g) => !g.steps["9"])
-    .sort((a, b) => {
-      const diff = maxEtape(b) - maxEtape(a);
+  function trier(liste, config) {
+    return [...liste].sort((a, b) => {
+      const diff = maxEtape(b, config.etapes) - maxEtape(a, config.etapes);
       if (diff !== 0) return diff;
       const da = derniereValidation(a) || a.createdAt;
       const db = derniereValidation(b) || b.createdAt;
       return db.localeCompare(da);
     });
+  }
 
-  const archives = etat.guests
-    .filter((g) => !!g.steps["9"])
+  // Invités : les diffusés partent aux archives, repliées par défaut.
+  const invitesActifs = trier(etat.guests.filter((g) => !g.steps["9"]), COLLECTIONS.guests);
+  const archives = [...etat.guests.filter((g) => !!g.steps["9"])]
     .sort((a, b) => (b.steps["9"] || "").localeCompare(a.steps["9"] || ""));
 
-  const inviteOuvert = etat.guests.find((g) => g.id === ficheOuverte) || null;
+  const partenaires = trier(etat.partners, COLLECTIONS.partners);
+  const sponsors = trier(etat.sponsors, COLLECTIONS.sponsors);
+
+  const entreeOuverte = ficheOuverte
+    ? (etat[ficheOuverte.collection].find((g) => g.id === ficheOuverte.id) || null)
+    : null;
+
+  // Rend une section complète : titre, en-tête de colonnes, champ d'ajout, lignes.
+  function rendreSection(collection, liste, compteTexte) {
+    const config = COLLECTIONS[collection];
+    return (
+      <React.Fragment>
+        <TitreSection libelle={config.titre} compte={compteTexte} />
+        <form onSubmit={(e) => ajouter(collection, e)} style={{ marginBottom: "6px" }}>
+          <input className="champ" style={{ maxWidth: "420px" }} value={saisies[collection]}
+                 placeholder={config.placeholder}
+                 onChange={(e) => setSaisies({ ...saisies, [collection]: e.target.value })} />
+        </form>
+        {liste.length > 0 && <EnTeteEtapes config={config} />}
+        {liste.map((g) => (
+          <GuestRow key={g.id} entree={g} config={config}
+                    animations={animations[g.id]}
+                    onClicEtape={(entree, num, evt) => clicEtape(collection, entree, num, evt)}
+                    onClicNom={(id) => setFicheOuverte({ collection, id })} />
+        ))}
+      </React.Fragment>
+    );
+  }
 
   /* ---------- Rendu ---------- */
 
@@ -835,51 +999,42 @@ function App() {
 
       <Header etat={etat} onExport={exporter} onImport={importer} />
 
-      {/* Ajout d'invité : un seul champ, validation à Entrée */}
-      <form onSubmit={ajouterInvite} style={{ marginBottom: "22px" }}>
-        <input className="champ" style={{ maxWidth: "420px" }} value={nomSaisi}
-               placeholder="Ajoute un invité et appuie sur Entrée…"
-               onChange={(e) => setNomSaisi(e.target.value)} />
-      </form>
-
-      {/* La Régie : une ligne par invité actif */}
-      {actifs.length === 0 && archives.length === 0 && (
-        <div style={{ color: "rgba(249,242,233,0.5)", fontSize: "15px", padding: "30px 0" }}>
-          Personne dans le pipeline. Tape un nom ci-dessus pour lancer la machine.
-        </div>
-      )}
-      {actifs.map((g) => (
-        <GuestRow key={g.id} invite={g}
-                  animations={animations[g.id]}
-                  onClicEtape={clicEtape}
-                  onClicNom={setFicheOuverte} />
-      ))}
+      {/* Section Invités : le cœur de la régie */}
+      {rendreSection("guests", invitesActifs,
+        invitesActifs.length + " en production")}
 
       {/* Archives : les diffusés, repliés par défaut */}
       {archives.length > 0 && (
-        <div style={{ marginTop: "28px" }}>
+        <div style={{ marginTop: "18px" }}>
           <button className="btn-discret" onClick={() => setArchivesOuvertes(!archivesOuvertes)}>
             {archivesOuvertes ? "▾" : "▸"} Archives — {archives.length} diffusé{archives.length > 1 ? "s" : ""}
           </button>
           {archivesOuvertes && (
             <div style={{ marginTop: "14px", opacity: 0.75 }}>
               {archives.map((g) => (
-                <GuestRow key={g.id} invite={g}
+                <GuestRow key={g.id} entree={g} config={COLLECTIONS.guests}
                           animations={animations[g.id]}
-                          onClicEtape={clicEtape}
-                          onClicNom={setFicheOuverte} />
+                          onClicEtape={(entree, num, evt) => clicEtape("guests", entree, num, evt)}
+                          onClicNom={(id) => setFicheOuverte({ collection: "guests", id })} />
               ))}
             </div>
           )}
         </div>
       )}
 
+      {/* Sections Partenariats et Sponsors : même mécanique, pipeline court */}
+      {rendreSection("partners", partenaires,
+        partenaires.length > 0 ? String(partenaires.length) : undefined)}
+      {rendreSection("sponsors", sponsors,
+        sponsors.length > 0 ? String(sponsors.length) : undefined)}
+
       <BadgeShelf badgesGagnes={etat.stats.badges} />
 
-      {/* Panneau latéral (fiche invité) */}
-      <SidePanel invite={inviteOuvert}
-                 onModifier={(id, champs) => dispatch({ type: "MODIFIER_INVITE", guestId: id, champs })}
-                 onSupprimer={(id) => { dispatch({ type: "SUPPRIMER_INVITE", guestId: id }); setFicheOuverte(null); }}
+      {/* Panneau latéral (fiche) */}
+      <SidePanel entree={entreeOuverte}
+                 config={ficheOuverte ? COLLECTIONS[ficheOuverte.collection] : COLLECTIONS.guests}
+                 onModifier={(id, champs) => dispatch({ type: "MODIFIER", collection: ficheOuverte.collection, entryId: id, champs })}
+                 onSupprimer={(id) => { dispatch({ type: "SUPPRIMER", collection: ficheOuverte.collection, entryId: id }); setFicheOuverte(null); }}
                  onFermer={() => setFicheOuverte(null)} />
 
       {/* XP flottant */}
