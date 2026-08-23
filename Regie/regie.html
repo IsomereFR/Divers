@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RÉGIE — Le Point de Bascule</title>
+
+<!-- Typo Oswald (titres, compteurs, noms) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<!-- React + Babel + Tailwind par CDN, aucun build -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  /* ============================================================
+     RÉGIE — direction artistique sérigraphie / risographie
+     Palette exclusive : vert sombre, crème, terracotta, menthe.
+     Aucun gris neutre : toutes les nuances = crème en opacité.
+     ============================================================ */
+  :root {
+    --vert:   #202C24;
+    --creme:  #F9F2E9;
+    --terra:  #B05226;
+    --menthe: #94EEB0;
+  }
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--vert);
+    color: var(--creme);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+  }
+  .oswald { font-family: "Oswald", sans-serif; }
+
+  /* Grain sérigraphie : turbulence SVG en overlay, très discret */
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 50;
+    opacity: 0.045; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  }
+
+  /* Cartes : aplats francs, ombre portée longue et dure (sans flou) */
+  .carte {
+    background: rgba(249, 242, 233, 0.06);
+    border: 1px solid rgba(249, 242, 233, 0.14);
+    border-radius: 8px;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* ---------- Pastilles d'étape ---------- */
+  .dot {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; position: relative; flex: none;
+    border: 2px solid rgba(249, 242, 233, 0.3);
+    background: transparent;
+    color: transparent;
+    font-size: 13px; font-weight: 700; line-height: 1;
+    transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dot:hover { transform: scale(1.15); }
+  .dot.validee {
+    background: var(--menthe);
+    border-color: var(--menthe);
+    color: var(--vert);
+  }
+  .dot.prochaine {
+    border-color: var(--terra);
+    animation: pulseTerra 2.2s ease-in-out infinite;
+  }
+  @keyframes pulseTerra {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(176, 82, 38, 0.55); }
+    50%      { box-shadow: 0 0 0 6px rgba(176, 82, 38, 0); }
+  }
+  /* Validation en cascade : pop décalé de 60 ms entre pastilles */
+  .dot.pop { animation: popIn 220ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+  @keyframes popIn {
+    0%   { transform: scale(0.4); background: var(--terra); border-color: var(--terra); }
+    100% { transform: scale(1);   background: var(--menthe); border-color: var(--menthe); }
+  }
+
+  /* Tooltip CSS pur : libellé (+ date de validation) au survol */
+  .dot::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: var(--creme); color: var(--vert);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 12px; font-weight: 600; white-space: nowrap;
+    padding: 4px 8px; border-radius: 4px;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+    opacity: 0; pointer-events: none;
+    transition: opacity 150ms ease, transform 150ms ease;
+    z-index: 30;
+  }
+  .dot:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- Lignes d'invités ---------- */
+  .ligne-invite { animation: rowIn 250ms ease backwards; }
+  @keyframes rowIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Pastille d'alerte de blocage */
+  .alerte-badge {
+    background: var(--terra); color: var(--creme);
+    border-radius: 999px; padding: 2px 9px;
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  /* ---------- XP flottant ---------- */
+  .xp-flottant {
+    position: fixed; z-index: 60; pointer-events: none;
+    color: var(--menthe); font-family: "Oswald", sans-serif;
+    font-size: 18px; font-weight: 700;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+    animation: floatUp 1s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0%   { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-48px); }
+  }
+
+  /* ---------- Confettis (étape 9 uniquement, 1,5 s max) ---------- */
+  .confetti {
+    position: fixed; top: -12px; z-index: 55; pointer-events: none;
+    width: 9px; height: 14px;
+    animation: chute 1.5s ease-in forwards;
+  }
+  @keyframes chute {
+    0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(70vh) rotate(560deg); }
+  }
+
+  /* ---------- Panneau latéral ---------- */
+  .panneau {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 320px; max-width: 90vw;
+    background: var(--vert);
+    border-left: 2px solid rgba(249, 242, 233, 0.2);
+    box-shadow: -8px 0 0 rgba(0, 0, 0, 0.3);
+    z-index: 40; padding: 24px;
+    animation: slideIn 200ms ease;
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+  .voile {
+    position: fixed; inset: 0; z-index: 35;
+    background: rgba(32, 44, 36, 0.6);
+  }
+
+  /* ---------- Champs & boutons ---------- */
+  .champ {
+    background: rgba(249, 242, 233, 0.08);
+    border: 1px solid rgba(249, 242, 233, 0.25);
+    border-radius: 6px; color: var(--creme);
+    padding: 8px 12px; font-size: 15px; width: 100%;
+    box-sizing: border-box; outline: none;
+    transition: border-color 150ms ease;
+  }
+  .champ:focus { border-color: var(--menthe); }
+  .champ::placeholder { color: rgba(249, 242, 233, 0.4); }
+  input[type="date"].champ { color-scheme: dark; }
+
+  .btn-discret {
+    background: transparent; cursor: pointer;
+    border: 1px solid rgba(249, 242, 233, 0.3);
+    color: rgba(249, 242, 233, 0.7);
+    border-radius: 6px; padding: 5px 12px; font-size: 12px;
+    transition: border-color 150ms ease, color 150ms ease;
+  }
+  .btn-discret:hover { border-color: var(--menthe); color: var(--menthe); }
+  .btn-danger { border-color: rgba(176, 82, 38, 0.6); color: var(--terra); }
+  .btn-danger:hover { border-color: var(--terra); color: var(--creme); background: var(--terra); }
+
+  /* Barre d'XP */
+  .barre-xp { height: 8px; border-radius: 4px; background: rgba(249, 242, 233, 0.15); overflow: hidden; }
+  .barre-xp > div { height: 100%; background: var(--menthe); transition: width 250ms ease; }
+
+  /* Badges */
+  .badge-item {
+    border: 2px solid rgba(249, 242, 233, 0.2);
+    border-radius: 8px; padding: 10px 14px; min-width: 130px;
+    opacity: 0.45; transition: opacity 200ms ease;
+  }
+  .badge-item.gagne {
+    opacity: 1; border-color: var(--menthe);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+    animation: rowIn 250ms ease backwards;
+  }
+
+  /* Nom cliquable */
+  .nom-invite { cursor: pointer; transition: color 150ms ease; }
+  .nom-invite:hover { color: var(--menthe); }
+
+  /* Grille de ligne : nom | pastilles | date | alerte */
+  .grille-ligne {
+    display: grid;
+    grid-template-columns: minmax(140px, 200px) 1fr auto auto;
+    gap: 14px; align-items: center;
+  }
+  @media (max-width: 720px) {
+    .grille-ligne { grid-template-columns: 1fr auto; }
+    .zone-dots { grid-column: 1 / -1; }
+  }
+  .zone-dots { display: flex; flex-wrap: wrap; gap: 8px; row-gap: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="grain"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useReducer, useRef, useMemo } = React;
+
+/* ================================================================
+   CONSTANTES MÉTIER
+   ================================================================ */
+
+// Les 9 étapes du pipeline, dans l'ordre, avec leur poids d'XP.
+const ETAPES = [
+  { id: 1, label: "Contacté",           xp: 10 },
+  { id: 2, label: "Trame rédigée",      xp: 20 },
+  { id: 3, label: "Trame envoyée",      xp: 10 },
+  { id: 4, label: "Trame validée",      xp: 15 },
+  { id: 5, label: "RDV calé",           xp: 15 },
+  { id: 6, label: "Enregistrement fait",xp: 40 },
+  { id: 7, label: "Montage fait",       xp: 35 },
+  { id: 8, label: "Livrable envoyé",    xp: 20 },
+  { id: 9, label: "Diffusé",            xp: 50 },
+];
+
+// Seuils d'XP cumulés pour passer chaque niveau, et titres successifs.
+const SEUILS  = [100, 250, 500, 850, 1300, 1900, 2600, 3500];
+const TITRES  = [
+  "Stagiaire micro", "Preneur de son", "Monteur", "Producteur",
+  "Chef d'antenne", "Voix qui porte", "Antenne libre", "Légende de la bande FM",
+];
+
+// Définition des badges déblocables (id stable + condition sur l'état global).
+const BADGES = [
+  { id: "trame-eclair", nom: "Trame éclair", desc: "Étapes 2 → 4 en moins de 7 jours",
+    test: (etat) => etat.guests.some((g) => {
+      const d2 = g.steps["2"], d4 = g.steps["4"];
+      return d2 && d4 && (new Date(d4) - new Date(d2)) < 7 * 86400000;
+    }) },
+  { id: "zero-blocage", nom: "Zéro blocage", desc: "Aucun invité en alerte",
+    test: (etat) => etat.guests.some((g) => maxEtape(g) > 0) &&
+                    !etat.guests.some((g) => joursBlocage(g) !== null) },
+  { id: "stock-plein", nom: "Stock plein", desc: "3 épisodes prêts simultanément",
+    test: (etat) => etat.guests.filter((g) => g.steps["8"] && !g.steps["9"]).length >= 3 },
+  { id: "marathon", nom: "Marathon", desc: "10 épisodes diffusés",
+    test: (etat) => etat.guests.filter((g) => g.steps["9"]).length >= 10 },
+];
+
+/* ================================================================
+   MODULE DE PERSISTANCE — isolé pour un futur passage à une base
+   distante : tout transite par un objet unique sérialisable.
+   ================================================================ */
+const CLE_STOCKAGE = "regie-lpb-v1";
+
+const Persistance = {
+  // Lit l'état complet. Retourne { data, erreur }.
+  charger() {
+    try {
+      const brut = localStorage.getItem(CLE_STOCKAGE);
+      if (!brut) return { data: null, erreur: false };
+      return { data: JSON.parse(brut), erreur: false };
+    } catch (e) {
+      return { data: null, erreur: true };
+    }
+  },
+  // Écrit l'état complet. Retourne true si OK.
+  sauver(data) {
+    try {
+      localStorage.setItem(CLE_STOCKAGE, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  },
+};
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+
+function uuid() {
+  return (crypto.randomUUID && crypto.randomUUID()) ||
+    "id-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+}
+
+// Squelette d'un invité neuf : rien d'autre que le nom n'est demandé.
+function nouvelInvite(nom) {
+  const steps = {};
+  ETAPES.forEach((e) => { steps[String(e.id)] = null; });
+  return {
+    id: uuid(), name: nom, format: null, note: "", airDate: null,
+    steps, createdAt: new Date().toISOString(), archived: false,
+  };
+}
+
+// Numéro de la plus haute étape validée (0 si aucune).
+function maxEtape(g) {
+  let m = 0;
+  ETAPES.forEach((e) => { if (g.steps[String(e.id)]) m = e.id; });
+  return m;
+}
+
+// Date ISO de la validation la plus récente (null si aucune).
+function derniereValidation(g) {
+  let d = null;
+  ETAPES.forEach((e) => {
+    const v = g.steps[String(e.id)];
+    if (v && (!d || v > d)) d = v;
+  });
+  return d;
+}
+
+// Nombre de jours de blocage si l'invité est en alerte, sinon null.
+// 14 jours par défaut, 21 si la dernière étape validée est la 3
+// (« Trame envoyée » : l'attente y est normale). Les diffusés et les
+// invités sans étape validée n'alertent jamais.
+function joursBlocage(g) {
+  if (g.steps["9"]) return null;
+  const derniere = derniereValidation(g);
+  if (!derniere) return null;
+  const jours = Math.floor((Date.now() - new Date(derniere).getTime()) / 86400000);
+  const seuil = maxEtape(g) === 3 ? 21 : 14;
+  return jours >= seuil ? jours : null;
+}
+
+// Clé de semaine ISO ("2026-W34") pour le calcul de la série.
+function semaineISO(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const jour = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - jour);
+  const debutAn = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const num = Math.ceil(((d - debutAn) / 86400000 + 1) / 7);
+  return d.getUTCFullYear() + "-W" + String(num).padStart(2, "0");
+}
+
+function formatDateFR(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// Niveau courant à partir de l'XP : index de titre + bornes de la barre.
+function infosNiveau(xp) {
+  let idx = 0;
+  while (idx < SEUILS.length && xp >= SEUILS[idx]) idx++;
+  const titre = TITRES[Math.min(idx, TITRES.length - 1)];
+  const bas = idx === 0 ? 0 : SEUILS[idx - 1];
+  const haut = idx < SEUILS.length ? SEUILS[idx] : null; // null = niveau max
+  const progression = haut ? (xp - bas) / (haut - bas) : 1;
+  return { niveau: idx + 1, titre, bas, haut, progression };
+}
+
+/* ================================================================
+   REDUCER — toute mutation passe ici, l'état reste un seul objet
+   sérialisable (le même que celui exporté / importé / persisté).
+   ================================================================ */
+
+const ETAT_INITIAL = {
+  version: 1,
+  guests: [],
+  stats: { xp: 0, badges: [], lastActiveWeek: null, streak: 0 },
+};
+
+// Recale un état importé / chargé sur le schéma attendu (champs manquants).
+function normaliser(data) {
+  const base = JSON.parse(JSON.stringify(ETAT_INITIAL));
+  if (!data || typeof data !== "object") return base;
+  const etat = { ...base, ...data };
+  etat.stats = { ...base.stats, ...(data.stats || {}) };
+  etat.guests = Array.isArray(data.guests)
+    ? data.guests.map((g) => ({ ...nouvelInvite(g.name || "Sans nom"), ...g,
+        steps: { ...nouvelInvite("").steps, ...(g.steps || {}) } }))
+    : [];
+  return etat;
+}
+
+// Met à jour la série de semaines actives après une validation.
+function majSerie(stats) {
+  const maintenant = new Date();
+  const semaine = semaineISO(maintenant);
+  if (stats.lastActiveWeek === semaine) return stats;
+  const precedente = semaineISO(new Date(maintenant.getTime() - 7 * 86400000));
+  const streak = stats.lastActiveWeek === precedente ? (stats.streak || 0) + 1 : 1;
+  return { ...stats, lastActiveWeek: semaine, streak };
+}
+
+// Ajoute les badges nouvellement mérités (jamais retirés une fois gagnés).
+function majBadges(etat) {
+  const gagnes = new Set(etat.stats.badges);
+  BADGES.forEach((b) => { if (!gagnes.has(b.id) && b.test(etat)) gagnes.add(b.id); });
+  return { ...etat, stats: { ...etat.stats, badges: [...gagnes] } };
+}
+
+function reducer(etat, action) {
+  switch (action.type) {
+
+    case "AJOUTER_INVITE":
+      return { ...etat, guests: [...etat.guests, nouvelInvite(action.nom)] };
+
+    // Valide une liste d'étapes (cascade incluse) et crédite l'XP.
+    case "VALIDER_ETAPES": {
+      const dateISO = new Date().toISOString();
+      let xpGagnee = 0;
+      const guests = etat.guests.map((g) => {
+        if (g.id !== action.guestId) return g;
+        const steps = { ...g.steps };
+        action.etapes.forEach((num) => {
+          if (!steps[String(num)]) {
+            steps[String(num)] = dateISO;
+            xpGagnee += ETAPES[num - 1].xp;
+          }
+        });
+        return { ...g, steps };
+      });
+      const stats = majSerie({ ...etat.stats, xp: etat.stats.xp + xpGagnee });
+      return majBadges({ ...etat, guests, stats });
+    }
+
+    // Annule la dernière étape validée : XP retirée, sans pénalité.
+    case "ANNULER_ETAPE": {
+      let xpRetiree = 0;
+      const guests = etat.guests.map((g) => {
+        if (g.id !== action.guestId) return g;
+        const steps = { ...g.steps, [String(action.etape)]: null };
+        xpRetiree = ETAPES[action.etape - 1].xp;
+        return { ...g, steps };
+      });
+      const stats = { ...etat.stats, xp: Math.max(0, etat.stats.xp - xpRetiree) };
+      return { ...etat, guests, stats };
+    }
+
+    case "MODIFIER_INVITE":
+      return { ...etat, guests: etat.guests.map((g) =>
+        g.id === action.guestId ? { ...g, ...action.champs } : g) };
+
+    case "SUPPRIMER_INVITE":
+      return { ...etat, guests: etat.guests.filter((g) => g.id !== action.guestId) };
+
+    // Remplacement complet (import JSON, après confirmation).
+    case "IMPORTER":
+      return normaliser(action.data);
+
+    default:
+      return etat;
+  }
+}
+
+/* ================================================================
+   COMPOSANT : StepDot — une pastille d'étape
+   ================================================================ */
+function StepDot({ etape, dateValidation, estProchaine, delaiPop, onClick }) {
+  const validee = !!dateValidation;
+  const tip = validee
+    ? etape.label + " — " + formatDateFR(dateValidation)
+    : etape.label + " (+" + etape.xp + " XP)";
+  const classes = ["dot"];
+  if (validee) classes.push("validee");
+  if (!validee && estProchaine) classes.push("prochaine");
+  if (delaiPop !== undefined) classes.push("pop");
+  return (
+    <button
+      className={classes.join(" ")}
+      data-tip={tip}
+      style={delaiPop !== undefined ? { animationDelay: delaiPop * 60 + "ms" } : undefined}
+      onClick={onClick}
+      aria-label={tip}
+    >
+      {validee ? "✓" : ""}
+    </button>
+  );
+}
+
+/* ================================================================
+   COMPOSANT : GuestRow — une ligne par invité
+   ================================================================ */
+function GuestRow({ invite, animations, onClicEtape, onClicNom }) {
+  const blocage = joursBlocage(invite);
+  const prochaine = maxEtape(invite) + 1; // première étape non validée
+
+  return (
+    <div className="carte ligne-invite grille-ligne" style={{ padding: "12px 16px", marginBottom: "12px" }}>
+      {/* Nom : ouvre le panneau latéral */}
+      <div className="nom-invite oswald" style={{ fontSize: "17px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+           onClick={() => onClicNom(invite.id)} title="Ouvrir la fiche">
+        {invite.name}
+      </div>
+
+      {/* Les 9 pastilles ; passent sur deux rangées si l'écran est étroit */}
+      <div className="zone-dots">
+        {ETAPES.map((e) => (
+          <StepDot
+            key={e.id}
+            etape={e}
+            dateValidation={invite.steps[String(e.id)]}
+            estProchaine={e.id === prochaine}
+            delaiPop={animations && animations[e.id]}
+            onClick={(evt) => onClicEtape(invite, e.id, evt)}
+          />
+        ))}
+      </div>
+
+      {/* Date de diffusion prévue */}
+      <div style={{ fontSize: "13px", color: "rgba(249,242,233,0.65)", minWidth: "70px", textAlign: "right" }}>
+        {invite.airDate ? formatDateFR(invite.airDate) : ""}
+      </div>
+
+      {/* Alerte de blocage */}
+      <div style={{ minWidth: "48px", textAlign: "right" }}>
+        {blocage !== null && (
+          <span className="alerte-badge" title={"Aucune validation depuis " + blocage + " jours"}>
+            {blocage} j
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   COMPOSANT : Header — bandeau permanent
+   ================================================================ */
+function Header({ etat, onExport, onImport }) {
+  const prets = etat.guests.filter((g) => g.steps["8"] && !g.steps["9"]).length;
+  const niv = infosNiveau(etat.stats.xp);
+
+  // La série ne s'affiche que si elle est encore « vivante »
+  // (dernière validation cette semaine ou la semaine dernière).
+  const maintenant = new Date();
+  const cetteSemaine = semaineISO(maintenant);
+  const semainePrec = semaineISO(new Date(maintenant.getTime() - 7 * 86400000));
+  const serieVivante = etat.stats.lastActiveWeek === cetteSemaine ||
+                       etat.stats.lastActiveWeek === semainePrec;
+  const serie = serieVivante ? (etat.stats.streak || 0) : 0;
+
+  const refImport = useRef(null);
+
+  return (
+    <div className="carte" style={{ padding: "18px 22px", marginBottom: "26px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: "26px" }}>
+
+      {/* Épisodes prêts : LE chiffre de l'écran */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
+        <span className="oswald" style={{ fontSize: "56px", fontWeight: 700, color: "var(--menthe)", lineHeight: 1 }}>
+          {prets}
+        </span>
+        <span className="oswald" style={{ fontSize: "16px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.8)" }}>
+          épisode{prets > 1 ? "s" : ""} prêt{prets > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Niveau + barre d'XP */}
+      <div style={{ flex: "1 1 220px", minWidth: "200px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
+          <span className="oswald" style={{ fontSize: "16px", fontWeight: 500 }}>
+            Niv. {niv.niveau} — {niv.titre}
+          </span>
+          <span style={{ fontSize: "12px", color: "rgba(249,242,233,0.6)" }}>
+            {niv.haut ? etat.stats.xp + " / " + niv.haut + " XP" : etat.stats.xp + " XP — max"}
+          </span>
+        </div>
+        <div className="barre-xp"><div style={{ width: Math.round(niv.progression * 100) + "%" }} /></div>
+      </div>
+
+      {/* Série de semaines actives */}
+      <div style={{ textAlign: "center" }}>
+        <div className="oswald" style={{ fontSize: "26px", fontWeight: 600, color: serie > 0 ? "var(--creme)" : "rgba(249,242,233,0.4)" }}>
+          {serie}
+        </div>
+        <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.55)" }}>
+          semaine{serie > 1 ? "s" : ""} de série
+        </div>
+      </div>
+
+      {/* Export / import JSON, discrets */}
+      <div style={{ display: "flex", gap: "8px" }}>
+        <button className="btn-discret" onClick={onExport}>Export JSON</button>
+        <button className="btn-discret" onClick={() => refImport.current && refImport.current.click()}>Import JSON</button>
+        <input ref={refImport} type="file" accept=".json,application/json" style={{ display: "none" }}
+               onChange={(e) => { onImport(e.target.files[0]); e.target.value = ""; }} />
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   COMPOSANT : SidePanel — fiche invité (jamais imposée)
+   ================================================================ */
+function SidePanel({ invite, onModifier, onSupprimer, onFermer }) {
+  if (!invite) return null;
+  return (
+    <React.Fragment>
+      <div className="voile" onClick={onFermer} />
+      <div className="panneau">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span className="oswald" style={{ fontSize: "20px", fontWeight: 600 }}>Fiche invité</span>
+          <button className="btn-discret" onClick={onFermer}>Fermer</button>
+        </div>
+
+        <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
+          Nom
+          <input className="champ" style={{ marginTop: "6px" }} value={invite.name}
+                 onChange={(e) => onModifier(invite.id, { name: e.target.value })} />
+        </label>
+
+        <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
+          Diffusion prévue
+          <input className="champ" style={{ marginTop: "6px" }} type="date"
+                 value={invite.airDate ? invite.airDate.slice(0, 10) : ""}
+                 onChange={(e) => onModifier(invite.id, { airDate: e.target.value || null })} />
+        </label>
+
+        <label style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "1px", color: "rgba(249,242,233,0.6)" }}>
+          Note
+          <input className="champ" style={{ marginTop: "6px" }} value={invite.note} placeholder="Une ligne, pas plus"
+                 onChange={(e) => onModifier(invite.id, { note: e.target.value })} />
+        </label>
+
+        <div style={{ marginTop: "auto" }}>
+          <button className="btn-discret btn-danger" style={{ width: "100%" }}
+                  onClick={() => {
+                    if (window.confirm("Supprimer " + invite.name + " ? C'est définitif.")) {
+                      onSupprimer(invite.id);
+                    }
+                  }}>
+            Supprimer cet invité
+          </button>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* ================================================================
+   COMPOSANT : BadgeShelf — rangée de badges en bas
+   ================================================================ */
+function BadgeShelf({ badgesGagnes }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "34px" }}>
+      {BADGES.map((b) => {
+        const gagne = badgesGagnes.includes(b.id);
+        return (
+          <div key={b.id} className={"badge-item" + (gagne ? " gagne" : "")}>
+            <div className="oswald" style={{ fontSize: "15px", fontWeight: 600, color: gagne ? "var(--menthe)" : "var(--creme)" }}>
+              {b.nom}
+            </div>
+            <div style={{ fontSize: "11px", color: "rgba(249,242,233,0.6)", marginTop: "2px" }}>
+              {b.desc}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ================================================================
+   COMPOSANT RACINE : App
+   ================================================================ */
+function App() {
+  // Chargement initial : une seule lecture du stockage.
+  const chargement = useMemo(() => Persistance.charger(), []);
+  const [etat, dispatch] = useReducer(reducer, chargement.data, normaliser);
+  const [erreurStockage, setErreurStockage] = useState(chargement.erreur);
+
+  // UI locale (jamais persistée)
+  const [nomSaisi, setNomSaisi] = useState("");
+  const [ficheOuverte, setFicheOuverte] = useState(null);     // id d'invité ou null
+  const [archivesOuvertes, setArchivesOuvertes] = useState(false);
+  const [flotteurs, setFlotteurs] = useState([]);             // XP flottant [{id,x,y,txt}]
+  const [animations, setAnimations] = useState({});           // {guestId: {etape: index}}
+
+  // Persistance à chaque mutation, sans bouton « enregistrer ».
+  useEffect(() => {
+    const ok = Persistance.sauver(etat);
+    if (!ok) setErreurStockage(true);
+  }, [etat]);
+
+  /* ---------- Interactions pastilles ---------- */
+
+  function clicEtape(invite, numero, evt) {
+    const max = maxEtape(invite);
+    const validee = !!invite.steps[String(numero)];
+
+    if (validee) {
+      // Un clic sur la DERNIÈRE étape validée l'annule (undo silencieux).
+      if (numero === max) dispatch({ type: "ANNULER_ETAPE", guestId: invite.id, etape: numero });
+      return;
+    }
+
+    // Validation avec cascade : toutes les étapes vides jusqu'à celle cliquée.
+    const aValider = [];
+    for (let n = 1; n <= numero; n++) {
+      if (!invite.steps[String(n)]) aValider.push(n);
+    }
+    if (aValider.length === 0) return;
+
+    dispatch({ type: "VALIDER_ETAPES", guestId: invite.id, etapes: aValider });
+
+    // Animation en chaîne : 60 ms de décalage entre chaque pastille.
+    const carte = {};
+    aValider.forEach((n, i) => { carte[n] = i; });
+    setAnimations({ [invite.id]: carte });
+    setTimeout(() => setAnimations({}), aValider.length * 60 + 400);
+
+    // XP flottant au point de clic.
+    const total = aValider.reduce((s, n) => s + ETAPES[n - 1].xp, 0);
+    const idF = uuid();
+    setFlotteurs((f) => [...f, { id: idF, x: evt.clientX, y: evt.clientY - 20, txt: "+" + total + " XP" }]);
+    setTimeout(() => setFlotteurs((f) => f.filter((x) => x.id !== idF)), 1000);
+
+    // Célébration uniquement à la diffusion (étape 9).
+    if (aValider.includes(9)) lancerConfettis();
+  }
+
+  // Confettis dans les 4 couleurs de la marque, 1,5 s, non bloquants.
+  function lancerConfettis() {
+    const couleurs = ["#202C24", "#F9F2E9", "#B05226", "#94EEB0"];
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement("div");
+      p.className = "confetti";
+      p.style.left = Math.random() * 100 + "vw";
+      p.style.background = couleurs[i % 4];
+      p.style.animationDelay = Math.random() * 0.3 + "s";
+      if (i % 4 === 0) p.style.border = "1px solid rgba(249,242,233,0.5)"; // le vert reste visible
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1900);
+    }
+  }
+
+  /* ---------- Ajout d'invité : un champ, Entrée, c'est tout ---------- */
+
+  function ajouterInvite(e) {
+    e.preventDefault();
+    const nom = nomSaisi.trim();
+    if (!nom) return;
+    dispatch({ type: "AJOUTER_INVITE", nom });
+    setNomSaisi("");
+  }
+
+  /* ---------- Export / Import JSON ---------- */
+
+  function exporter() {
+    try {
+      const blob = new Blob([JSON.stringify(etat, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const d = new Date();
+      const nom = "regie-" + d.getFullYear() + "-" +
+        String(d.getMonth() + 1).padStart(2, "0") + "-" +
+        String(d.getDate()).padStart(2, "0") + ".json";
+      a.href = url; a.download = nom; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+    } catch (e) {
+      window.alert("L'export a échoué : " + e.message);
+    }
+  }
+
+  function importer(fichier) {
+    if (!fichier) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      try {
+        const data = JSON.parse(lecteur.result);
+        if (!data || !Array.isArray(data.guests)) {
+          window.alert("Ce fichier ne ressemble pas à un export RÉGIE.");
+          return;
+        }
+        if (window.confirm("Remplacer TOUTES les données actuelles par ce fichier ?")) {
+          dispatch({ type: "IMPORTER", data });
+          setFicheOuverte(null);
+        }
+      } catch (e) {
+        window.alert("Fichier illisible : " + e.message);
+      }
+    };
+    lecteur.readAsText(fichier);
+  }
+
+  /* ---------- Tri : les plus avancés en haut, diffusés en archives ---------- */
+
+  const actifs = etat.guests
+    .filter((g) => !g.steps["9"])
+    .sort((a, b) => {
+      const diff = maxEtape(b) - maxEtape(a);
+      if (diff !== 0) return diff;
+      const da = derniereValidation(a) || a.createdAt;
+      const db = derniereValidation(b) || b.createdAt;
+      return db.localeCompare(da);
+    });
+
+  const archives = etat.guests
+    .filter((g) => !!g.steps["9"])
+    .sort((a, b) => (b.steps["9"] || "").localeCompare(a.steps["9"] || ""));
+
+  const inviteOuvert = etat.guests.find((g) => g.id === ficheOuverte) || null;
+
+  /* ---------- Rendu ---------- */
+
+  return (
+    <div style={{ maxWidth: "960px", margin: "0 auto", padding: "28px 20px 60px" }}>
+
+      {/* Bandeau d'avertissement si le stockage local est indisponible */}
+      {erreurStockage && (
+        <div style={{ background: "var(--terra)", color: "var(--creme)", padding: "10px 16px",
+                      borderRadius: "6px", marginBottom: "18px", fontSize: "14px",
+                      boxShadow: "4px 4px 0 rgba(0,0,0,0.35)" }}>
+          ⚠ Le stockage local ne répond pas : tes modifications ne seront pas conservées.
+          Pense à faire un export JSON avant de fermer.
+        </div>
+      )}
+
+      {/* Titre */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "14px", marginBottom: "20px" }}>
+        <h1 className="oswald" style={{ fontSize: "34px", fontWeight: 700, margin: 0, letterSpacing: "2px" }}>
+          RÉGIE
+        </h1>
+        <span style={{ fontSize: "13px", color: "rgba(249,242,233,0.55)" }}>Le Point de Bascule</span>
+      </div>
+
+      <Header etat={etat} onExport={exporter} onImport={importer} />
+
+      {/* Ajout d'invité : un seul champ, validation à Entrée */}
+      <form onSubmit={ajouterInvite} style={{ marginBottom: "22px" }}>
+        <input className="champ" style={{ maxWidth: "420px" }} value={nomSaisi}
+               placeholder="Ajoute un invité et appuie sur Entrée…"
+               onChange={(e) => setNomSaisi(e.target.value)} />
+      </form>
+
+      {/* La Régie : une ligne par invité actif */}
+      {actifs.length === 0 && archives.length === 0 && (
+        <div style={{ color: "rgba(249,242,233,0.5)", fontSize: "15px", padding: "30px 0" }}>
+          Personne dans le pipeline. Tape un nom ci-dessus pour lancer la machine.
+        </div>
+      )}
+      {actifs.map((g) => (
+        <GuestRow key={g.id} invite={g}
+                  animations={animations[g.id]}
+                  onClicEtape={clicEtape}
+                  onClicNom={setFicheOuverte} />
+      ))}
+
+      {/* Archives : les diffusés, repliés par défaut */}
+      {archives.length > 0 && (
+        <div style={{ marginTop: "28px" }}>
+          <button className="btn-discret" onClick={() => setArchivesOuvertes(!archivesOuvertes)}>
+            {archivesOuvertes ? "▾" : "▸"} Archives — {archives.length} diffusé{archives.length > 1 ? "s" : ""}
+          </button>
+          {archivesOuvertes && (
+            <div style={{ marginTop: "14px", opacity: 0.75 }}>
+              {archives.map((g) => (
+                <GuestRow key={g.id} invite={g}
+                          animations={animations[g.id]}
+                          onClicEtape={clicEtape}
+                          onClicNom={setFicheOuverte} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <BadgeShelf badgesGagnes={etat.stats.badges} />
+
+      {/* Panneau latéral (fiche invité) */}
+      <SidePanel invite={inviteOuvert}
+                 onModifier={(id, champs) => dispatch({ type: "MODIFIER_INVITE", guestId: id, champs })}
+                 onSupprimer={(id) => { dispatch({ type: "SUPPRIMER_INVITE", guestId: id }); setFicheOuverte(null); }}
+                 onFermer={() => setFicheOuverte(null)} />
+
+      {/* XP flottant */}
+      {flotteurs.map((f) => (
+        <span key={f.id} className="xp-flottant" style={{ left: f.x + "px", top: f.y + "px" }}>
+          {f.txt}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
